@@ -13,6 +13,7 @@ __pycache__/
 **/*.pyc
 **/*.sig
 **/.ropeproject*
+*.DS_Store
 
 # Directory
 experiments/*
