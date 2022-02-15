@@ -495,134 +495,130 @@ end function;
 
 
 intrinsic GaloisStableSubgroups(X1::Crv, X2::Crv) -> .
-  {Determines Galois-stable maximal isotropic subgroups of 2-torsion.}
+{Determines Galois-stable maximal isotropic subgroups of 2-torsion.}
 
-  assert Genus(X1) eq 1;
-  assert Genus(X2) eq 2;
+assert Genus(X1) eq 1;
+assert Genus(X2) eq 2;
 
-  P1 := PeriodMatrix(X1);
-  P2 := PeriodMatrix(X2);
+P1 := PeriodMatrix(X1);
+P2 := PeriodMatrix(X2);
 
-  f1, h1 := HyperellipticPolynomials(X1);
-  f2, h2 := HyperellipticPolynomials(X2);
-  g1 := (4*f1 + h1^2) / 4;
-  g2 := (4*f2 + h2^2) / 4;
+f1, h1 := HyperellipticPolynomials(X1);
+f2, h2 := HyperellipticPolynomials(X2);
+g1 := (4*f1 + h1^2) / 4;
+g2 := (4*f2 + h2^2) / 4;
 
-  SE1 := X1`riesrf;
-  SE2 := X2`riesrf;
-  bps1 := SE1`BranchPoints;
-  bps2 := SE2`BranchPoints;
+SE1 := X1`riesrf;
+SE2 := X2`riesrf;
+bps1 := SE1`BranchPoints;
+bps2 := SE2`BranchPoints;
+bps1 := [ bp1 : bp1 in bps1 | Type(bp1) ne Infty ];
+bps2 := [ bp2 : bp2 in bps2 | Type(bp2) ne Infty ];
 
-  F := BaseRing(X1); R := PolynomialRing(F);
-  L := SplittingFieldPari(g1*g2);
-  L := NumberFieldExtra(R ! DefiningPolynomial(L));
+F := BaseRing(X1); R := PolynomialRing(F);
+L := SplittingFieldPari(g1*g2);
+L := NumberFieldExtra(R ! DefiningPolynomial(L));
 
-  /* Make order of roots coincide with those of branch points */
-  rts1 := RootsPari(g1, L);
-  rts2 := RootsPari(g2, L);
-  rts1CC := [ EmbedExtra(rt1) : rt1 in rts1 ];
-  rts2CC := [ EmbedExtra(rt2) : rt2 in rts2 ];
-  relab1 := RelabelRoots(rts1CC, bps1);
-  relab2 := RelabelRoots(rts2CC, bps2);
-  rts1 := [ rts1[i] : i in relab1 ];
-  rts2 := [ rts2[i] : i in relab2 ];
+/* Make order of roots coincide with those of branch points */
+rts1 := RootsPari(g1, L);
+rts2 := RootsPari(g2, L);
+rts1CC := [ EmbedExtra(rt1) : rt1 in rts1 ];
+rts2CC := [ EmbedExtra(rt2) : rt2 in rts2 ];
+relab1 := RelabelRoots(rts1CC, bps1);
+relab2 := RelabelRoots(rts2CC, bps2);
+rts1 := [ rts1[i] : i in relab1 ];
+rts2 := [ rts2[i] : i in relab2 ];
 
-  /* Sanity check */
-  rts1CC := [ EmbedExtra(rt1) : rt1 in rts1 ];
-  rts2CC := [ EmbedExtra(rt2) : rt2 in rts2 ];
-  relab1 := RelabelRoots(rts1CC, bps1);
-  relab2 := RelabelRoots(rts2CC, bps2);
-  assert relab1 eq [1..#relab1];
-  assert relab2 eq [1..#relab2];
+/* Sanity check */
+rts1CC := [ EmbedExtra(rt1) : rt1 in rts1 ];
+rts2CC := [ EmbedExtra(rt2) : rt2 in rts2 ];
+relab1 := RelabelRoots(rts1CC, bps1);
+relab2 := RelabelRoots(rts2CC, bps2);
+assert relab1 eq [1..#relab1];
+assert relab2 eq [1..#relab2];
 
-  h1, hinv1 := DivToChar(SE1, bps1);
-  h2, hinv2 := DivToChar(SE2, bps2);
+h1, hinv1 := DivToChar(SE1, bps1);
+h2, hinv2 := DivToChar(SE2, bps2);
 
-  Gp, _, Gphi := AutomorphismGroupPari(L);
-  gens := GeneratorsFor12(Gp, Gphi, rts1, rts2);
+Gp, _, Gphi := AutomorphismGroupPari(L);
+gens := GeneratorsFor12(Gp, Gphi, rts1, rts2);
 
-  Vs := AllVs2For12();
-  Vs0 := [ ];
-  for V in Vs do
-      isosubgp := SubgroupFor12(V, hinv1, hinv2);
-      if IsGaloisStableLabeledFor12(isosubgp, gens) then
-          Append(~Vs0, V);
-      end if;
-  end for;
-  return Vs0;
+Vs := AllVs2For12();
+Vs0 := [ ];
+for V in Vs do
+    isosubgp := SubgroupFor12(V, hinv1, hinv2);
+    if IsGaloisStableLabeledFor12(isosubgp, gens) then
+        Append(~Vs0, V);
+    end if;
+end for;
+return Vs0;
+
 end intrinsic;
 
 
 intrinsic GaloisStableSubgroups(X1::Crv, X2::Crv, X3::Crv) -> .
-  {Determines Galois-stable maximal isotropic subgroups of 2-torsion.}
+{Determines Galois-stable maximal isotropic subgroups of 2-torsion.}
 
-  assert Genus(X1) eq 1;
-  assert Genus(X2) eq 1;
-  assert Genus(X3) eq 1;
+assert Genus(X1) eq 1;
+assert Genus(X2) eq 1;
+assert Genus(X3) eq 1;
 
-  P1 := PeriodMatrix(X1);
-  P2 := PeriodMatrix(X2);
-  P3 := PeriodMatrix(X3);
+P1 := PeriodMatrix(X1);
+P2 := PeriodMatrix(X2);
+P3 := PeriodMatrix(X3);
 
-  f1, h1 := HyperellipticPolynomials(X1);
-  f2, h2 := HyperellipticPolynomials(X2);
-  f3, h3 := HyperellipticPolynomials(X3);
-  g1 := (4*f1 + h1^2) / 4;
-  g2 := (4*f2 + h2^2) / 4;
-  g3 := (4*f3 + h3^3) / 4;
+f1, h1 := HyperellipticPolynomials(X1);
+f2, h2 := HyperellipticPolynomials(X2);
+f3, h3 := HyperellipticPolynomials(X3);
+g1 := (4*f1 + h1^2) / 4;
+g2 := (4*f2 + h2^2) / 4;
+g3 := (4*f3 + h3^3) / 4;
 
-  SE1 := X1`riesrf;
-  SE2 := X2`riesrf;
-  SE3 := X3`riesrf;
-  bps1 := SE1`BranchPoints;
-  bps2 := SE2`BranchPoints;
-  bps3 := SE3`BranchPoints;
+SE1 := X1`riesrf;
+SE2 := X2`riesrf;
+SE3 := X3`riesrf;
+bps1 := SE1`BranchPoints;
+bps2 := SE2`BranchPoints;
+bps3 := SE3`BranchPoints;
+bps1 := [ bp1 : bp1 in bps1 | Type(bp1) ne Infty ];
+bps2 := [ bp2 : bp2 in bps2 | Type(bp2) ne Infty ];
+bps3 := [ bp3 : bp3 in bps3 | Type(bp3) ne Infty ];
 
-  F := BaseRing(X1); R := PolynomialRing(F);
-  L := SplittingFieldPari(g1*g2*g3);
-  L := NumberFieldExtra(R ! DefiningPolynomial(L));
+F := BaseRing(X1); R := PolynomialRing(F);
+L := SplittingFieldPari(g1*g2*g3);
+L := NumberFieldExtra(R ! DefiningPolynomial(L));
 
-  /* Make order of roots coincide with those of branch points */
-  rts1 := RootsPari(g1, L);
-  rts2 := RootsPari(g2, L);
-  rts3 := RootsPari(g3, L);
-  rts1CC := [ EmbedExtra(rt1) : rt1 in rts1 ];
-  rts2CC := [ EmbedExtra(rt2) : rt2 in rts2 ];
-  rts3CC := [ EmbedExtra(rt3) : rt3 in rts3 ];
-  relab1 := RelabelRoots(rts1CC, bps1);
-  relab2 := RelabelRoots(rts2CC, bps2);
-  relab3 := RelabelRoots(rts3CC, bps3);
-  rts1 := [ rts1[i] : i in relab1 ];
-  rts2 := [ rts2[i] : i in relab2 ];
-  rts3 := [ rts3[i] : i in relab3 ];
+/* Make order of roots coincide with those of branch points */
+rts1 := RootsPari(g1, L);
+rts2 := RootsPari(g2, L);
+rts3 := RootsPari(g3, L);
+rts1CC := [ EmbedExtra(rt1) : rt1 in rts1 ];
+rts2CC := [ EmbedExtra(rt2) : rt2 in rts2 ];
+rts3CC := [ EmbedExtra(rt3) : rt3 in rts3 ];
+relab1 := RelabelRoots(rts1CC, bps1);
+relab2 := RelabelRoots(rts2CC, bps2);
+relab3 := RelabelRoots(rts3CC, bps3);
+rts1 := [ rts1[i] : i in relab1 ];
+rts2 := [ rts2[i] : i in relab2 ];
+rts3 := [ rts3[i] : i in relab3 ];
 
-  /* Sanity check */
-  rts1CC := [ EmbedExtra(rt1) : rt1 in rts1 ];
-  rts2CC := [ EmbedExtra(rt2) : rt2 in rts2 ];
-  rts3CC := [ EmbedExtra(rt3) : rt3 in rts3 ];
-  relab1 := RelabelRoots(rts1CC, bps1);
-  relab2 := RelabelRoots(rts2CC, bps2);
-  relab3 := RelabelRoots(rts3CC, bps3);
-  assert relab1 eq [1..#relab1];
-  assert relab2 eq [1..#relab2];
-  assert relab3 eq [1..#relab3];
+/* Sanity check */
+rts1CC := [ EmbedExtra(rt1) : rt1 in rts1 ];
+rts2CC := [ EmbedExtra(rt2) : rt2 in rts2 ];
+rts3CC := [ EmbedExtra(rt3) : rt3 in rts3 ];
+relab1 := RelabelRoots(rts1CC, bps1);
+relab2 := RelabelRoots(rts2CC, bps2);
+relab3 := RelabelRoots(rts3CC, bps3);
+assert relab1 eq [1..#relab1];
+assert relab2 eq [1..#relab2];
+assert relab3 eq [1..#relab3];
 
-  h1, hinv1 := DivToChar(SE1, bps1);
-  h2, hinv2 := DivToChar(SE2, bps2);
-  h3, hinv3 := DivToChar(SE3, bps3);
+h1, hinv1 := DivToChar(SE1, bps1);
+h2, hinv2 := DivToChar(SE2, bps2);
+h3, hinv3 := DivToChar(SE3, bps3);
 
-  Gp, _, Gphi := AutomorphismGroupPari(L);
-  gens := GeneratorsFor111(Gp, Gphi, rts1, rts2, rts3);
-
-  Vs := AllVs2For111();
-  Vs0 := [ ];
-  for V in Vs do
-      isosubgp := SubgroupFor111(V, hinv1, hinv2, hinv3);
-      if IsGaloisStableLabeledFor111(isosubgp, gens) then
-          Append(~Vs0, V);
-      end if;
-  end for;
-  return Vs0;
+Gp, _, Gphi := AutomorphismGroupPari(L);
+gens := GeneratorsFor111(Gp, Gphi, rts1, rts2, rts3);
 
 end intrinsic;
 
