@@ -639,7 +639,6 @@ h3, hinv3 := DivToChar(SE3, bps3);
 
 Gp, _, Gphi := AutomorphismGroupPari(L);
 gens := GeneratorsFor111(Gp, Gphi, rts1, rts2, rts3);
-return gens;
 
 Vs := AllVs2For111();
 Vs0 := [ ];
