@@ -1,3 +1,8 @@
+AttachSpec("~/github/quartic_reconstruction/magma/spec");
+AttachSpec("~/github/curve_reconstruction/magma/spec");
+AttachSpec("~/github/endomorphisms/endomorphisms/magma/spec");
+AttachSpec("~/github/quartic_isomorphisms/magma/spec");
+
 /* Arithmetic reconstruction */
 
 SetVerbose("QuarticIso", 1);
@@ -17,11 +22,10 @@ print "";
 print "Can we glue over QQ?";
 print ExistsGaloisStableSubgroupFor22(f1, f2);
 
-/*
-  X1 := HyperellipticCurve(f1);
-  X2 := HyperellipticCurve(f2);
+X1 := HyperellipticCurve(f1);
+X2 := HyperellipticCurve(f2);
 
-  print "";
-  print "All arithmetic 2-gluings:";
-  Ys := AllArithmetic2GluingsCC(X1, X2, F);
-*/
+print "";
+print "All arithmetic 2-gluings:";
+Ys := AllArithmetic2GluingsCCFor22(X1, X2, F);
+Ys;

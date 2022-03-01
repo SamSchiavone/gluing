@@ -176,6 +176,28 @@ return true;
 
 end function;
 
+function IsGaloisStableExistsFor22(isosubgp, G)
+/* G is a group as output by FactoredGaloisGroup, and isosubgroup is a subgroup
+ * of the 2-torsion represented by pairs of divisors. The function checks if
+ * isosubgp is stable under G. */
+
+S4 := SymmetricGroup(6);
+S6 := SymmetricGroup(6);
+for g in Generators(G) do
+    for tup in isosubgp do
+        tup1 := tup[1]; tup2 := tup[2];
+        sigma1 := S4 ! Eltseq(g)[1..6];
+        sigma2 := S6 ! [ n - 6 : n in Eltseq(g)[7..12] ];
+        tupnew := [* tup1^sigma1, tup[2]^sigma2 *];
+        if not tupnew in isosubgp then
+            return false;
+        end if;
+    end for;
+end for;
+return true;
+
+end function;
+
 
 function MakeEven(f)
 /* Multiply f by a linear factor to make it separable of even degree */

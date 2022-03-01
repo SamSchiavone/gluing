@@ -65,6 +65,33 @@ return Q;
 
 end function;
 
+function QFromPVFor22(P, V)
+/* Creates quotient of abelian variety corresponding to P by symplectic
+ * subgroup corresponding to V */
+
+p := Characteristic(BaseRing(V));
+L1 := Lattice(IdentityMatrix(Rationals(), 8));
+M2 := Matrix(Basis(V));
+M2 := Matrix(Rationals(), #Rows(M2), #Rows(Transpose(M2)), [ LiftFF(c, p) : c in Eltseq(M2) ]);
+L2 := Lattice(M2);
+L := L1 + L2;
+T := Matrix(Basis(L));
+
+E1 := StandardSymplecticMatrix(2);
+E2 := StandardSymplecticMatrix(2);
+E3 := DiagonalJoin(E1, E2);
+T1 := Transpose(T);
+E := Transpose(T1)*E3*T1;
+
+E0, T2 := FrobeniusFormAlternating(ChangeRing(p*E, Integers()));
+BT := T1*Transpose(T2);
+
+Q := P*ChangeRing(BT, BaseRing(P));
+//assert IsBigPeriodMatrix(Q);
+return Q;
+
+end function;
+
 
 intrinsic AllGeometric2GluingsCC(X1::Crv, X2::Crv, F::Fld) -> .
 {Returns all geometric gluings whose invariants are defined over F.}
@@ -270,6 +297,42 @@ end for;
 return Ys, Vs;
 
 end intrinsic;
+
+//TODO: add in reconstruction for genus 4 curves
+intrinsic AllArithmetic2GluingsCCFor22(X1::Crv, X2::Crv, F::Fld : Base := true) -> .
+{Returns all gluings over the base field.}
+
+/* TODO: For now we impose the following */
+assert Base;
+P1 := PeriodMatrix(X1); P2 := PeriodMatrix(X2);
+P := DiagonalJoin(P1, P2);
+
+Vs := GaloisStableSubgroups22(X1, X2);
+Ys := [* *];
+Qs := [* *];
+for V in Vs do
+    vprint Gluing : "";
+    vprint Gluing : "-----------------------";
+    vprint Gluing : "Subgroup:";
+    vprint Gluing : V;
+    vprint Gluing : "-----------------------";
+
+    Q := QFromPVFor22(P, V);
+    //Y, hKL, test := ReconstructCurveGeometric(SmallPeriodMatrix(Q), F : Base := Base);
+    //Y, hKL, test := ReconstructCurve(Q, F : Base := Base);
+    // TODO: reconstruction for genus 4 curves
+    /*
+    print Y;
+    Append(~Ys, Y);
+    */
+    print Q;
+    Append(~Qs, Q);
+end for;
+//return Ys, Vs;
+return Qs, Vs;
+
+end intrinsic;
+
 
 
 intrinsic SomeArithmeticGluingCC(X1::Crv, X2::Crv, F::Fld, p::RngIntElt : Base := true) -> .
