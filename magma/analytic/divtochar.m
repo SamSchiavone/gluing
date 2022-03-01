@@ -144,16 +144,16 @@ elif #bps eq 6 then
 
     /* The six fundamental divisors in genus 2 and the corresponding characteristics */
     gendivs := [ S6 ! (1, 2), S6 ! (1, 3), S6 ! (1, 4), S6 ! (1, 5), S6 ! (1, 6) ];
-    P1 := [ bps[1], 0 ];
-    P2 := [ bps[2], 0 ];
+    P1 := SE![ bps[1], 0 ];
+    P2 := SE![ bps[2], 0 ];
     genchar12 := AbelJacobi(P2, P1 : Reduction := "Real");
-    P3 := [ bps[3], 0 ];
+    P3 := SE![ bps[3], 0 ];
     genchar13 := AbelJacobi(P3, P1 : Reduction := "Real");
-    P4 := [ bps[4], 0 ];
+    P4 := SE![ bps[4], 0 ];
     genchar14 := AbelJacobi(P4, P1 : Reduction := "Real");
-    P5 := [ bps[5], 0 ];
+    P5 := SE![ bps[5], 0 ];
     genchar15 := AbelJacobi(P5, P1 : Reduction := "Real");
-    P6 := [ bps[6], 0 ];
+    P6 := SE![ bps[6], 0 ];
     genchar16 := AbelJacobi(P6, P1 : Reduction := "Real");
     genchars := [ genchar12, genchar13, genchar14, genchar15, genchar16 ];
     genchars := [ V2 ! [ Round(2*c) : c in Eltseq(char) ] : char in genchars ];
