@@ -33,7 +33,7 @@ E0, T2 := FrobeniusFormAlternating(ChangeRing(p*E, Integers()));
 BT := T1*Transpose(T2);
 
 Q := P*ChangeRing(BT, BaseRing(P));
-assert IsBigPeriodMatrix(Q);
+//assert IsBigPeriodMatrix(Q);
 return Q;
 
 end function;
@@ -60,7 +60,7 @@ E0, T2 := FrobeniusFormAlternating(ChangeRing(p*E, Integers()));
 BT := T1*Transpose(T2);
 
 Q := P*ChangeRing(BT, BaseRing(P));
-assert IsBigPeriodMatrix(Q);
+//assert IsBigPeriodMatrix(Q);
 return Q;
 
 end function;
