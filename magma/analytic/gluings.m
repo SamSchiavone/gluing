@@ -325,7 +325,7 @@ for V in Vs do
     print Y;
     Append(~Ys, Y);
     */
-    print Q;
+    //print Q;
     Append(~Qs, Q);
 end for;
 //return Ys, Vs;
