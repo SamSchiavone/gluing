@@ -1,7 +1,14 @@
-AttachSpec("~/github/quartic_reconstruction/magma/spec");
-AttachSpec("~/github/curve_reconstruction/magma/spec");
-AttachSpec("~/github/endomorphisms/endomorphisms/magma/spec");
-AttachSpec("~/github/quartic_isomorphisms/magma/spec");
+/*
+  AttachSpec("~/github/quartic_reconstruction/magma/spec");
+  AttachSpec("~/github/curve_reconstruction/magma/spec");
+  AttachSpec("~/github/endomorphisms/endomorphisms/magma/spec");
+  AttachSpec("~/github/quartic_isomorphisms/magma/spec");
+*/
+
+AttachSpec("~/github/CHIMP/quartic_reconstruction/magma/spec");
+AttachSpec("~/github/CHIMP/curve_reconstruction/magma/spec");
+AttachSpec("~/github/CHIMP/endomorphisms/endomorphisms/magma/spec");
+AttachSpec("~/github/CHIMP/quartic_isomorphisms/magma/spec");
 
 /* Arithmetic reconstruction */
 
