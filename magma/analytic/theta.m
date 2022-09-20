@@ -214,7 +214,8 @@ intrinsic SiegelReduction(tau::AlgMatElt) -> Any
   QQ := Rationals();
   ZZ := Integers();
 
-  Aq := VerticalJoin(HorizontalJoin(ZeroMatrix(RR,1,1), ZeroMatrix(RR,g-1,1)), HorizontalJoin(ZeroMatrix(RR,g-1,1), IdentityMatrix(RR,g-1)));
+  vprint Theta: "Setting up block matrices";
+  Aq := VerticalJoin(HorizontalJoin(ZeroMatrix(RR,1,1), ZeroMatrix(RR,1,g-1)), HorizontalJoin(ZeroMatrix(RR,g-1,1), IdentityMatrix(RR,g-1)));
   Bq := VerticalJoin(HorizontalJoin(-IdentityMatrix(RR,1), ZeroMatrix(RR,1,g-1)), HorizontalJoin(ZeroMatrix(RR,g-1,1), ZeroMatrix(RR,g-1,g-1)));
   Cq := -Bq;
   Dq := Aq;
@@ -224,6 +225,7 @@ intrinsic SiegelReduction(tau::AlgMatElt) -> Any
   Gamma := IdentityMatrix(RR, 2*g);
   e := RR!0;
 
+  vprint Theta: "Entering while loop";
   while e le 1 do
     Y := Imaginary(tau);
     Y := (Y + Transpose(Y))/2; // make sure matrix is symmetric
@@ -241,6 +243,7 @@ intrinsic SiegelReduction(tau::AlgMatElt) -> Any
       //i +:= 1;
     //end while;
     end for;
+    vprintf Theta: "short = %o\n", short;
 
     if short ne 1 then
       S := SwapColumns(IdentityMatrix(RR,g),1,short);
@@ -264,11 +267,12 @@ intrinsic SiegelReduction(tau::AlgMatElt) -> Any
     tau -:= ChangeRing(B,CC);
     Gamma := VerticalJoin(HorizontalJoin(IdentityMatrix(RR,g), -B), HorizontalJoin(ZeroMatrix(RR,g,g), IdentityMatrix(RR,g)))*Gamma;
     e := Abs(tau[1,1]);
+    vprintf Theta: "Now e = %o\n", e;
     if e gt 1 then
       return tau, Gamma;
     else
       Gamma := quasi_inversion*Gamma;
-      tau := (Aq*tau + Bq)*Inverse(Cq*tau + Bq);
+      tau := (Aq*tau + Bq)*((Cq*tau + Bq)^-1);
     end if;
   end while;
 end intrinsic;
