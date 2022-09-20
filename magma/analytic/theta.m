@@ -37,19 +37,12 @@ intrinsic L2Norm(A::AlgMatElt) -> RngElt
   return L2Norm(&cat[[A[i,j] : j in [1..Ncols(A)]] : i in [1..Nrows(A)]]);
 end intrinsic;
 
-/* TODO finish
-intrinsic ShortestVectors(M::AlgMatElt)
-  {}
-  ZZ := Integers();
-  R := BaseRing(Parent(M));
-  p := -(Ceiling(Log(Max(radius, M))/Log(2))+4);
-  n := Nrows(M);
-  d := ZeroMatrix(ZZ, n, n);
-  round_scale!(d, M, p); // TODO wut?
-  L := Zlattice(d);
-  U := shortest_vectors(L);
-  return [change_base_ring(R, u)*M for u in U];
-end intrinsic;
+/*
+  intrinsic ShortestVectors(M::AlgMatElt)
+    {}
+    L := Lattice(M);
+    return ShortestVectors(L);
+  end intrinsic;
 */
 
 // theta series
@@ -89,11 +82,10 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
  eps := RR(10^-n);
 
   // In Agostini and Chua's code rho = is taken to be the square of the norm of the shortest vector times sqrt(pi)) for some reason. This could affect the error bounds
-  //rho := L2Norm(ShortestVectors(Transpose(T))[1]*Sqrt(pi)); // TODO fix
-  rho := 1;
+  rho := L2Norm(ShortestVectors(Lattice(Transpose(T)))*Sqrt(pi));
 
   N := #dz;
-  R0 := (Sqrt(g + 2*N + Sqrt(g^2 + 8*N)) + rho) div 2;
+  R0 := (1/2)*(Sqrt(g + 2*N + Sqrt(g^2 + 8*N)) + rho);
 
   T_inv_norm := L2Norm(Inverse(T));
 
@@ -101,7 +93,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   function R_function(x, eps)
     Rc := Parent(x);
     return (2*pi)^N * (g/2) * (2/rho)^g * &+[Binomial(N, j) * (pi^(j/2))^-1 * T_inv_norm^j * Sqrt(g)^(N - j) * Gamma(Rc!(g + j)/2, (x - rho/2)^2) : j in [0..N]];
-      init := Rc!0 - eps; // TODO: what is this?
+      //init := Rc!0 - eps;
   end function;
 
   /*
@@ -135,4 +127,116 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   radius_ellipsoid := R1;
   error_epsilon := R_function(R1, RR!0);
 
+  ellipsoid_points := [el[1] : el in ShortVectors(Lattice(Y), R1^2/pi)];
+  for i := 1 to g do
+    Lat1 := [];
+    pad := Vector([RR!0 : i in [1..g]]);
+    pad[i] := 1;
+    for pt in ellipsoid_points do
+      Append(~Lat1, pt + pad);
+      Append(~Lat1, pt - pad);
+    end for;
+    ellipsoid_points cat:= Lat1;
+  end for;
+
+  factor := CC!1;
+  for ij in dtau do
+    if ij[1] eq ij[2] then
+      factor /:= 4*pi*I;
+    else
+      factor /:= 2*pi*I;
+    end if;
+    deriv := [[0 : i in [1..g]] : j in [1,2]];
+    deriv[1][ij[1]] := 1;
+    deriv[2][ij[2]] := 1;
+    dz := VerticalJoin(dz,deriv);
+  end for;
+  
+  // We seem to find more points than Agostini as we also consider lattices centered at points of the form [0,1,-1], etc. This could also affect error bounds
+
+  // We compute the Theta function
+  x := Real(z);
+  y := Imaginary(z);
+
+  invYy := Inverse(Y)*y; // is y a row or column vector?
+  exponential_part := Exp(pi*(Transpose(y)*invYy));
+
+  //eta := ; ? TODO round all entries of invYy
+
+  //pointset := ; ? TODO
+  pointset := [];
+
+  //oscillatory_part = (2*piR*i)^N*sum([ prod(transpose(d)*v for d in dz; init = one(Rc)) * exp(piR*i*((transpose(v) * (X * v)) + 2*transpose(v) * (x + char[2]//2))) * exp(-piR* (transpose(v + invYy) * (Y * (v + invYy)))) for v in pointset]; init = zero(Cc))
+  oscillatory_part := (2*pi*I)^N*&+[&*[Transpose(d)*v : d in dz] * Exp(pi*I*((Transpose(v) * (X * v)) + 2*Transpose(v) * (x + char[2]/2))) * Exp(-pi * (Transpose(v + invYy) * (Y * (v + invYy)))) : v in pointset];
+
+  result := factor*exponential_part*oscillatory_part;
+  error_term := exponential_part*error_epsilon;
+
+  return result, error_term;
+end intrinsic;
+
+intrinsic SiegelReduction(tau::AlgMatElt) -> Any
+  {}
+
+  g := Nrows(tau);
+  CC<I> := BaseRing(tau);
+  RR := BaseRing(Real(tau));
+
+  Aq := VerticalJoin(HorizontalJoin(ZeroMatrix(RR,1,1), ZeroMatrix(RR,g-1,1)), HorizontalJoin(ZeroMatrix(RR,g-1,1), IdentityMatrix(RR,g-1)));
+  Bq := VerticalJoin(HorizontalJoin(-IdentityMatrix(1), ZeroMatrix(RR,1,g-1)), HorizontalJoin(ZeroMatrix(RR,g-1,1), ZeroMatrix(RR,g-1,g-1)));
+  Cq := -Bq;
+  Dq := Aq;
+
+  quasi_inversion := VerticalJoin(HorizontalJoin(Aq, Bq), HorizontalJoin(Cq,Dq));
+
+  Gamma := IdentityMatrix(RR, 2*g);
+  e := RR!0;
+
+  while e le 1 do
+    Y := Imaginary(tau);
+    Y := (Y + Transpose(Y))/2; // make sure matrix is symmetric
+    T := Cholesky(Imaginary(tau));
+    T, U := LLL(T);
+    Tt := Transpose(T);
+
+    short := 1;
+    //i := 1;
+    //while i le g do
+    for i := 1 to g do
+      if L2Norm(Rows(T)[short]) gt L2Norm(Rows(T)[i]) then
+        short := i;
+      end if;
+      i +:= 1;
+    //end while;
+    end for;
+
+    if short ne 1 then
+      S := SwapColumns(IdentityMatrix(RR,g),1,short);
+      T := S*T;
+      U := S*U;
+    end if;
+
+    Tt := Transpose(T);
+    Y := T*Tt;
+
+    Gamma := VerticalJoin(HorizontalJoin(U,ZeroMatrix(RR,g)), HorizontalJoin(ZeroMatrix(RR,g), Inverse(Transpose(U))))*Gamma;
+    tau := U*Real(tau)*Transpose(U) + I*Y;
+    X := Real(tau);
+
+    B := Parent(X)!0;
+    for i := 1 to Nrows(B) do
+      for j := 1 to Ncols(B) do
+        B[i,j] := Round(X[i,j]);
+      end for;
+    end for;
+    tau -:= B;
+    Gamma := VerticalJoin(HorizontalJoin(IdentityMatrix(RR,g), -B), HorizontalJoin(ZeroMatrix(RR,g,g), IdentityMatrix(RR,g)))*Gamma;
+    e := Abs(tau[1,1]);
+    if e gt 1 then
+      return tau, Gamma;
+    else
+      Gamma := quasi_inversion*Gamma;
+      tau := (Aq*tau + Bq)*Inverse(Cq*tau + Bq);
+    end if;
+  end while;
 end intrinsic;
