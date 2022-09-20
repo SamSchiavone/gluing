@@ -17,6 +17,8 @@ intrinsic Imaginary(S::SeqEnum) -> RngElt
   return [Imaginary(el) : el in S];
 end intrinsic;
 
+declare verbose Theta, 1;
+
 intrinsic Real(A::AlgMatElt) -> AlgMatElt
   {}
   return Matrix(Nrows(A), Ncols(A), [[Real(A[i,j]) : j in [1..Ncols(A)]] : i in [1..Nrows(A)]]);
@@ -31,6 +33,12 @@ intrinsic L2Norm(S::SeqEnum[RngElt]) -> RngElt
   {}
   return Sqrt(&+[el^2 : el in S]);
 end intrinsic;
+
+intrinsic L2Norm(v::ModTupFldElt) -> RngElt
+  {}
+  return L2Norm(Eltseq(v));
+end intrinsic;
+
 
 intrinsic L2Norm(A::AlgMatElt) -> RngElt
   {}
@@ -50,6 +58,8 @@ end intrinsic;
 intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dtau := [], prec := 0) -> SeqEnum
   {}
 
+  ZZ := Integers();
+  QQ := Rationals();
   g := Nrows(tau);
 
   if prec gt 0 then
@@ -66,9 +76,12 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   end if;
 
   if char eq [] then
-    char := [Matrix(GF(2),1,4,[0 : i in [1..g]]) : j in [1,2]];
+    //char := [Matrix(GF(2),1,g,[0 : i in [1..g]]) : j in [1,2]];
+    //char := [Matrix(QQ,1,g,[0 : i in [1..g]]) : j in [1,2]];
+    char := [Vector([QQ!0 : i in [1..g]]) : j in [1,2]];
   end if;
-  if (#char[1] ne g) or (#char[2] ne g) then
+  //if (#char[1] ne g) or (#char[2] ne g) then
+  if (Ncols(char[1]) ne g) or (Ncols(char[2]) ne g) then
     error "characteristic must have length g";
   end if;
 
@@ -78,11 +91,13 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   // Find T upper-triangular with transpose(T)*T = Y
   T := Transpose(Cholesky(Y));
 
- n := Floor(prec*Log(2)/Log(10));
- eps := RR(10^-n);
+  n := Floor(prec*Log(2)/Log(10));
+  eps := RR!(10^-n);
 
   // In Agostini and Chua's code rho = is taken to be the square of the norm of the shortest vector times sqrt(pi)) for some reason. This could affect the error bounds
-  rho := L2Norm(ShortestVectors(Lattice(Transpose(T)))*Sqrt(pi));
+  vprint Theta: "Setting radius...";
+  rho := L2Norm(ShortestVector(Lattice(Transpose(T)))*Sqrt(pi));
+  vprintf Theta: "rho = %o\n", rho;
 
   N := #dz;
   R0 := (1/2)*(Sqrt(g + 2*N + Sqrt(g^2 + 8*N)) + rho);
@@ -92,7 +107,11 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   // We compute the radius of the ellipsoid over which we take the sum needed to bound the error in the sum by eps (See Theorem 3.1 in Agostini, Chua) 
   function R_function(x, eps)
     Rc := Parent(x);
-    return (2*pi)^N * (g/2) * (2/rho)^g * &+[Binomial(N, j) * (pi^(j/2))^-1 * T_inv_norm^j * Sqrt(g)^(N - j) * Gamma(Rc!(g + j)/2, (x - rho/2)^2) : j in [0..N]];
+    if N eq 0 then
+      return -eps;
+    else
+      return (2*pi)^N * (g/2) * (2/rho)^g * &+[Binomial(N, j) * (pi^(j/2))^-1 * T_inv_norm^j * Sqrt(g)^(N - j) * Gamma(Rc!(g + j)/2, (x - rho/2)^2) : j in [0..N]];
+    end if;
       //init := Rc!0 - eps;
   end function;
 
@@ -104,13 +123,18 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
     and then subdivide intervals until we find a solution that satisfies our requirements
   */
 
+  vprint Theta: "Computing radius of ellipsoid";
   R1 := R0;
   err := RR!(10^(-n));
+  vprintf Theta: "initializing R1 = %o\n", R1;
 
   // Find an R1 such that R_function becomes negative
   while R_function(R1, eps) gt 0 do
+    vprintf Theta: "R_function = %o\n", R_function(R1, eps);
     R1 := R1 + R0;
+    vprintf Theta: "R1 = %o\n", R1;
   end while;
+  vprintf Theta: "Making R_function negative, now R1 = %o\n", R1;
 
   if R1 ne R0 then
     while (0 lt R_function(R0, eps)) or (R_function(R0, eps) lt -err) do
@@ -123,20 +147,22 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
       end if;
     end while;
   end if;
+  vprintf Theta: "After while loop, R0 = %o, R1 = %o\n", R0, R1;
 
   radius_ellipsoid := R1;
   error_epsilon := R_function(R1, RR!0);
 
-  ellipsoid_points := [el[1] : el in ShortVectors(Lattice(Y), R1^2/pi)];
+  vprint Theta: "Computing lattice points in translates of ellipsoid";
+  ellipsoid_points := [Vector(el[1]) : el in ShortVectors(Lattice(Y), R1^2/pi)];
   for i := 1 to g do
     Lat1 := [];
     pad := Vector([RR!0 : i in [1..g]]);
     pad[i] := 1;
     for pt in ellipsoid_points do
-      Append(~Lat1, pt + pad);
-      Append(~Lat1, pt - pad);
+      Append(~Lat1, Vector(pt) + pad);
+      Append(~Lat1, Vector(pt) - pad);
     end for;
-    ellipsoid_points cat:= Lat1;
+    ellipsoid_points cat:= [Vector(el) : el in Lat1];
   end for;
 
   factor := CC!1;
@@ -155,19 +181,23 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   // We seem to find more points than Agostini as we also consider lattices centered at points of the form [0,1,-1], etc. This could also affect error bounds
 
   // We compute the Theta function
+  vprint Theta: "Computing theta function";
   x := Real(z);
+  x := Vector(x);
   y := Imaginary(z);
+  y := Matrix(#y,1,y);
 
+  vprint Theta: "\tComputing exponential part";
   invYy := Inverse(Y)*y; // is y a row or column vector?
-  exponential_part := Exp(pi*(Transpose(y)*invYy));
+  exponential_part := Exp(pi*(Transpose(y)*invYy)[1,1]);
 
-  //eta := ; ? TODO round all entries of invYy
-
-  //pointset := ; ? TODO
-  pointset := [];
+  eta := Vector([Round(el) : el in Eltseq(invYy)]) - char[1]/2;
+  pointset := [el - eta : el in ellipsoid_points];
+  pointset := [Matrix(g,1,Eltseq(el)) : el in pointset];
 
   //oscillatory_part = (2*piR*i)^N*sum([ prod(transpose(d)*v for d in dz; init = one(Rc)) * exp(piR*i*((transpose(v) * (X * v)) + 2*transpose(v) * (x + char[2]//2))) * exp(-piR* (transpose(v + invYy) * (Y * (v + invYy)))) for v in pointset]; init = zero(Cc))
-  oscillatory_part := (2*pi*I)^N*&+[&*[Transpose(d)*v : d in dz] * Exp(pi*I*((Transpose(v) * (X * v)) + 2*Transpose(v) * (x + char[2]/2))) * Exp(-pi * (Transpose(v + invYy) * (Y * (v + invYy)))) : v in pointset];
+  vprint Theta: "\tComputing oscillatory part";
+  oscillatory_part := (2*pi*I)^N*&+[CC | &*[CC | Transpose(d)*v : d in dz] * Exp(pi*I*((Transpose(v) * (X * v)) + 2*Transpose(v) * Matrix(g,1,(x + char[2]/2)))[1,1]) * Exp(-pi * (Transpose(v + invYy) * (Y * (v + invYy)))[1,1]) : v in pointset];
 
   result := factor*exponential_part*oscillatory_part;
   error_term := exponential_part*error_epsilon;
@@ -181,9 +211,11 @@ intrinsic SiegelReduction(tau::AlgMatElt) -> Any
   g := Nrows(tau);
   CC<I> := BaseRing(tau);
   RR := BaseRing(Real(tau));
+  QQ := Rationals();
+  ZZ := Integers();
 
   Aq := VerticalJoin(HorizontalJoin(ZeroMatrix(RR,1,1), ZeroMatrix(RR,g-1,1)), HorizontalJoin(ZeroMatrix(RR,g-1,1), IdentityMatrix(RR,g-1)));
-  Bq := VerticalJoin(HorizontalJoin(-IdentityMatrix(1), ZeroMatrix(RR,1,g-1)), HorizontalJoin(ZeroMatrix(RR,g-1,1), ZeroMatrix(RR,g-1,g-1)));
+  Bq := VerticalJoin(HorizontalJoin(-IdentityMatrix(RR,1), ZeroMatrix(RR,1,g-1)), HorizontalJoin(ZeroMatrix(RR,g-1,1), ZeroMatrix(RR,g-1,g-1)));
   Cq := -Bq;
   Dq := Aq;
 
@@ -206,7 +238,7 @@ intrinsic SiegelReduction(tau::AlgMatElt) -> Any
       if L2Norm(Rows(T)[short]) gt L2Norm(Rows(T)[i]) then
         short := i;
       end if;
-      i +:= 1;
+      //i +:= 1;
     //end while;
     end for;
 
@@ -219,7 +251,7 @@ intrinsic SiegelReduction(tau::AlgMatElt) -> Any
     Tt := Transpose(T);
     Y := T*Tt;
 
-    Gamma := VerticalJoin(HorizontalJoin(U,ZeroMatrix(RR,g)), HorizontalJoin(ZeroMatrix(RR,g), Inverse(Transpose(U))))*Gamma;
+    Gamma := VerticalJoin(HorizontalJoin(U,ZeroMatrix(ZZ,g)), HorizontalJoin(ZeroMatrix(ZZ,g), (Transpose(U)^-1)))*Gamma;
     tau := U*Real(tau)*Transpose(U) + I*Y;
     X := Real(tau);
 
@@ -229,7 +261,7 @@ intrinsic SiegelReduction(tau::AlgMatElt) -> Any
         B[i,j] := Round(X[i,j]);
       end for;
     end for;
-    tau -:= B;
+    tau -:= ChangeRing(B,CC);
     Gamma := VerticalJoin(HorizontalJoin(IdentityMatrix(RR,g), -B), HorizontalJoin(ZeroMatrix(RR,g,g), IdentityMatrix(RR,g)))*Gamma;
     e := Abs(tau[1,1]);
     if e gt 1 then
