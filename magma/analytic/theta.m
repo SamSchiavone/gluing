@@ -67,13 +67,12 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   else
     prec := Min([Precision(Parent(z[1])), Precision(Parent(tau[1,1]))]);
   end if;
-  CC<I> := ComplexField(prec);
+  CC<I> := ComplexFieldExtra(prec);
   RR := RealField(prec);
   pi := Pi(RR);
 
-  if #z ne g then
-    error "z must have length g";
-  end if;
+
+  require #z eq g: "z must have length g";
 
   if char eq [] then
     //char := [Matrix(GF(2),1,g,[0 : i in [1..g]]) : j in [1,2]];
@@ -89,22 +88,22 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   X := Real(tau);
   Y := Imaginary(tau);
   // Find T upper-triangular with transpose(T)*T = Y
+  Y := (Y + Transpose(Y))/2;
   T := Transpose(Cholesky(Y));
 
-  n := Floor(prec*Log(2)/Log(10));
-  eps := RR!(10^-n);
+  eps := CC`epscomp;
 
   // In Agostini and Chua's code rho = is taken to be the square of the norm of the shortest vector times sqrt(pi)) for some reason. This could affect the error bounds
   vprint Theta: "Setting radius...";
   rho := L2Norm(ShortestVector(Lattice(Transpose(T)))*Sqrt(pi));
   vprintf Theta: "rho = %o\n", rho;
 
-  N := #dz;
+  N := &+dz;
   R0 := (1/2)*(Sqrt(g + 2*N + Sqrt(g^2 + 8*N)) + rho);
 
   T_inv_norm := L2Norm(Inverse(T));
 
-  // We compute the radius of the ellipsoid over which we take the sum needed to bound the error in the sum by eps (See Theorem 3.1 in Agostini, Chua) 
+  // We compute the radius of the ellipsoid over which we take the sum needed to bound the error in the sum by eps (See Theorem 3.1 in Agostini, Chua)
   function R_function(x, eps)
     Rc := Parent(x);
     if N eq 0 then
@@ -125,7 +124,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
 
   vprint Theta: "Computing radius of ellipsoid";
   R1 := R0;
-  err := RR!(10^(-n));
+  err := CC`epscomp;
   vprintf Theta: "initializing R1 = %o\n", R1;
 
   // Find an R1 such that R_function becomes negative
@@ -175,9 +174,9 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
     deriv := [[0 : i in [1..g]] : j in [1,2]];
     deriv[1][ij[1]] := 1;
     deriv[2][ij[2]] := 1;
-    dz := VerticalJoin(dz,deriv);
+    dz := VerticalJoin(dz, deriv);
   end for;
-  
+
   // We seem to find more points than Agostini as we also consider lattices centered at points of the form [0,1,-1], etc. This could also affect error bounds
 
   // We compute the Theta function
