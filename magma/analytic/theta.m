@@ -90,6 +90,10 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   Y := Imaginary(tau);
   // Find T upper-triangular with transpose(T)*T = Y
   T := Transpose(Cholesky(Y));
+  vprintf Theta: "Cholesky decomposition T = %o\n", T;
+  printf "Y = %o\n", Y;
+  printf "T^t * T = %o\n", Transpose(T)*T;
+  printf "T * T^t = %o\n", T*Transpose(T);
 
   n := Floor(prec*Log(2)/Log(10));
   eps := RR!(10^-n);
@@ -99,7 +103,11 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   rho := L2Norm(ShortestVector(Lattice(Transpose(T)))*Sqrt(pi));
   vprintf Theta: "rho = %o\n", rho;
 
-  N := &+dz;
+  if #dz eq 0 then
+    N := 0;
+  else
+    N := &+dz;
+  end if;
   R0 := (1/2)*(Sqrt(g + 2*N + Sqrt(g^2 + 8*N)) + rho);
 
   T_inv_norm := L2Norm(Inverse(T));
@@ -190,6 +198,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   vprint Theta: "\tComputing exponential part";
   invYy := Inverse(Y)*y; // is y a row or column vector?
   exponential_part := Exp(pi*(Transpose(y)*invYy)[1,1]);
+  vprintf Theta: "\t\t= %o\n", exponential_part;
 
   eta := Vector([Round(el) : el in Eltseq(invYy)]) - char[1]/2;
   pointset := [el - eta : el in ellipsoid_points];
@@ -198,6 +207,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   //oscillatory_part = (2*piR*i)^N*sum([ prod(transpose(d)*v for d in dz; init = one(Rc)) * exp(piR*i*((transpose(v) * (X * v)) + 2*transpose(v) * (x + char[2]//2))) * exp(-piR* (transpose(v + invYy) * (Y * (v + invYy)))) for v in pointset]; init = zero(Cc))
   vprint Theta: "\tComputing oscillatory part";
   oscillatory_part := (2*pi*I)^N*&+[CC | &*[CC | Transpose(d)*v : d in dz] * Exp(pi*I*((Transpose(v) * (X * v)) + 2*Transpose(v) * Matrix(g,1,(x + char[2]/2)))[1,1]) * Exp(-pi * (Transpose(v + invYy) * (Y * (v + invYy)))[1,1]) : v in pointset];
+  vprintf Theta: "\t\t= %o\n", oscillatory_part;
 
   result := factor*exponential_part*oscillatory_part;
   error_term := exponential_part*error_epsilon;
