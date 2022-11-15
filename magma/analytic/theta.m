@@ -99,7 +99,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   rho := L2Norm(ShortestVector(Lattice(Transpose(T)))*Sqrt(pi));
   vprintf Theta: "rho = %o\n", rho;
 
-  N := #dz;
+  N := &+dz;
   R0 := (1/2)*(Sqrt(g + 2*N + Sqrt(g^2 + 8*N)) + rho);
 
   T_inv_norm := L2Norm(Inverse(T));
