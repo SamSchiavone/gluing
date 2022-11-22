@@ -1,3 +1,20 @@
+v1 := Vector([1/3, 1/4, 1/5]);
+v2 := Vector([-7/5, 11/10, 6]);
+w1 := 1/5*v1 - 2*v2;
+w2 := -3*v1 + (1/2)*v2;
+//M1 := Matrix([Eltseq(v1), Eltseq(v2), [1,2,3]]);
+//M2 := Matrix([Eltseq(w1), Eltseq(w2), [5,6,7]]);
+M1 := Matrix([Eltseq(v1), Eltseq(v2)]);
+M2 := Matrix([Eltseq(w1), Eltseq(w2)]);
+M := VerticalJoin(M2,M1);
+K := Kernel(M);
+K;
+M := ChangeRing(M,RR);
+K := NumericalKernel(M);
+K;
+EchelonForm(K);
+
+/*
 AttachSpec("spec");
 load "../examples/genus4/galois-stable.m";
 K;
@@ -70,3 +87,4 @@ basics := Submatrix(R, 1, Ncols(R)+1 - r, Nrows(R), r)*Submatrix(Q, Nrows(Q)+1 -
 [Clow!Max([Abs(elt) : elt in Eltseq(col)]) : col in Rows(Transpose(M))] where M := basics;
 [Clow!Max([Abs(elt) : elt in Eltseq(col)]) : col in Rows(Transpose(M))] where M := basics - inter;
 RowSpanInter := Submatrix(Q, Nrows(Q)+1 -r, 1, r, Ncols(Q)) where r:=4;
+*/
