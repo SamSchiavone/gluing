@@ -26,9 +26,12 @@ end
 //R<x,y> := PolynomialRing(QQ,2);
 AttachSpec("spec");
 SetVerbose("Theta",true);
-CC<I> := ComplexField();
-z := [0.81149300+0.27027128*I, 0.77132834+0.26619567*I];
-tau := Matrix(2,2,[0.71106237+1.20021283*I, 0.57281731+0.89762698*I, 0.57281731+0.89762698*I, 0.22079146+0.68617488*I]);
+SetDebugOnError(true);
+prec := 300;
+SetDefaultRealFieldPrecision(300);
+CC<I> := ComplexField(300);
+z := [CC | 0.81149300+0.27027128*I, 0.77132834+0.26619567*I];
+tau := Matrix(2,2,[CC | 0.71106237+1.20021283*I, 0.57281731+0.89762698*I, 0.57281731+0.89762698*I, 0.22079146+0.68617488*I]);
 Y := Imaginary(tau);
 x := Real(z);
 y := [Imaginary(el) : el in z];

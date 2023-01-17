@@ -67,6 +67,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   else
     prec := Min([Precision(Parent(z[1])), Precision(Parent(tau[1,1]))]);
   end if;
+  SetDefaultRealFieldPrecision(prec);
   CC<I> := ComplexField(prec);
   RR := RealField(prec);
   pi := Pi(RR);
@@ -108,19 +109,16 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   else
     N := &+dz;
   end if;
-  R0 := (1/2)*(Sqrt(g + 2*N + Sqrt(g^2 + 8*N)) + rho);
+  R0 := (1/2)*(Sqrt(CC!(g + 2*N + Sqrt(CC!(g^2 + 8*N))) + rho));
+  printf "initial R0 = %o with precision %o\n", R0, Precision(R0);
 
   T_inv_norm := L2Norm(Inverse(T));
 
   // We compute the radius of the ellipsoid over which we take the sum needed to bound the error in the sum by eps (See Theorem 3.1 in Agostini, Chua) 
   function R_function(x, eps)
     Rc := Parent(x);
-    if N eq 0 then
-      return -eps;
-    else
-      return (2*pi)^N * (g/2) * (2/rho)^g * &+[Binomial(N, j) * (pi^(j/2))^-1 * T_inv_norm^j * Sqrt(g)^(N - j) * Gamma(Rc!(g + j)/2, (x - rho/2)^2) : j in [0..N]];
-    end if;
-      //init := Rc!0 - eps;
+    return -eps + (2*pi)^N * (g/2) * (2/rho)^g * &+[Binomial(N, j) * (pi^(j/2))^-1 * T_inv_norm^j * Sqrt(g)^(N - j) * (1-Gamma(Rc!(g + j)/2, (x - rho/2)^2)) : j in [0..N]]; // Gamma or 1 - Gamma???
+    //init := Rc!0 - eps;
   end function;
 
   /*
@@ -138,13 +136,14 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
 
   // Find an R1 such that R_function becomes negative
   while R_function(R1, eps) gt 0 do
-    vprintf Theta: "R_function = %o\n", R_function(R1, eps);
     R1 := R1 + R0;
     vprintf Theta: "R1 = %o\n", R1;
+    vprintf Theta: "R_function = %o\n", R_function(R1, eps);
   end while;
   vprintf Theta: "Making R_function negative, now R1 = %o\n", R1;
 
   if R1 ne R0 then
+  //if not Abs(R1 - R0) lt eps then
     while (0 lt R_function(R0, eps)) or (R_function(R0, eps) lt -err) do
       Rmid := (R0 + R1)/2;
       middle := R_function(Rmid, eps);
@@ -153,6 +152,9 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
       else
         R0 := Rmid;
       end if;
+      printf "Rmid = %o, R0 = %o, R1 = %o, middle = %o\n", Rmid, R0, R1, middle;
+      printf "R_function(R0, eps) = %o\n", R_function(R0, eps);
+      printf "eps = %o\n", eps;
     end while;
   end if;
   vprintf Theta: "After while loop, R0 = %o, R1 = %o\n", R0, R1;
