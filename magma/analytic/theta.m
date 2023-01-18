@@ -147,7 +147,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
     while (0 lt R_function(R0, eps)) or (R_function(R0, eps) lt -err) do
       Rmid := (R0 + R1)/2;
       middle := R_function(Rmid, eps);
-      if middle lt 0 then
+      if middle lt -eps then
         R1 := Rmid;
       else
         R0 := Rmid;
