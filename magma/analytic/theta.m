@@ -163,17 +163,24 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   error_epsilon := R_function(R1, RR!0);
 
   vprint Theta: "Computing lattice points in translates of ellipsoid";
-  ellipsoid_points := [Vector(el[1]) : el in ShortVectors(Lattice(Y), R1^2/pi)];
+  L := Lattice(Y);
+  ellipsoid_points := [Coordinates(L, L!Vector(el[1])) : el in ShortVectors(Lattice(Y), R1^2/pi)];
+  printf "initial #ellipsoid points = %o\n", #ellipsoid_points;
   for i := 1 to g do
     Lat1 := [];
-    pad := Vector([RR!0 : i in [1..g]]);
+    pad := Vector([0 : i in [1..g]]);
     pad[i] := 1;
     for pt in ellipsoid_points do
-      Append(~Lat1, Vector(pt) + pad);
-      Append(~Lat1, Vector(pt) - pad);
+      Append(~Lat1, Eltseq(Vector(pt) + pad));
+      Append(~Lat1, Eltseq(Vector(pt) - pad));
     end for;
-    ellipsoid_points cat:= [Vector(el) : el in Lat1];
+    //printf "i = %o\n", i;
+    //printf "new points = %o\n", [Vector(el) : el in Lat1];
+    ellipsoid_points cat:= [Eltseq(Vector(el)) : el in Lat1];
   end for;
+  ellipsoid_points := Setseq(Seqset(ellipsoid_points));
+  printf "final #ellipsoid points = %o\n", #ellipsoid_points;
+  //printf "ellipsoid points = %o\n", ellipsoid_points;
 
   factor := CC!1;
   for ij in dtau do
@@ -203,12 +210,18 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   vprintf Theta: "\t\t= %o\n", exponential_part;
 
   eta := Vector([Round(el) : el in Eltseq(invYy)]) - char[1]/2;
-  pointset := [el - eta : el in ellipsoid_points];
+  pointset := [Vector(el) - eta : el in ellipsoid_points];
   pointset := [Matrix(g,1,Eltseq(el)) : el in pointset];
 
   //oscillatory_part = (2*piR*i)^N*sum([ prod(transpose(d)*v for d in dz; init = one(Rc)) * exp(piR*i*((transpose(v) * (X * v)) + 2*transpose(v) * (x + char[2]//2))) * exp(-piR* (transpose(v + invYy) * (Y * (v + invYy)))) for v in pointset]; init = zero(Cc))
   vprint Theta: "\tComputing oscillatory part";
-  oscillatory_part := (2*pi*I)^N*&+[CC | &*[CC | Transpose(d)*v : d in dz] * Exp(pi*I*((Transpose(v) * (X * v)) + 2*Transpose(v) * Matrix(g,1,(x + char[2]/2)))[1,1]) * Exp(-pi * (Transpose(v + invYy) * (Y * (v + invYy)))[1,1]) : v in pointset];
+  //oscillatory_part := (2*pi*I)^N*&+[CC | &*[CC | Transpose(d)*v : d in dz] * Exp(pi*I*((Transpose(v) * (X * v)) + 2*Transpose(v) * Matrix(g,1,(x + char[2]/2)))[1,1]) * Exp(-pi * (Transpose(v + invYy) * (Y * (v + invYy)))[1,1]) : v in pointset];
+  oscillatory_part := RR!0;
+  for v in pointset do
+    vRR := ChangeRing(v, RR);
+    oscillatory_part +:= &*[CC | Transpose(d)*vRR : d in dz] * Exp(pi*I*((Transpose(vRR) * (X * vRR)) + 2*Transpose(vRR) * Matrix(g,1,(x + char[2]/2)))[1,1]) * Exp(-pi * (Transpose(vRR + invYy) * (Y * (vRR + invYy)))[1,1]);
+  end for;
+  oscillatory_part *:= (2*pi*I)^N;
   vprintf Theta: "\t\t= %o\n", oscillatory_part;
 
   result := factor*exponential_part*oscillatory_part;
