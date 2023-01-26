@@ -152,19 +152,27 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
       else
         R0 := Rmid;
       end if;
-      printf "Rmid = %o, R0 = %o, R1 = %o, middle = %o\n", Rmid, R0, R1, middle;
-      printf "R_function(R0, eps) = %o\n", R_function(R0, eps);
-      printf "eps = %o\n", eps;
+      //printf "Rmid = %o, R0 = %o, R1 = %o, middle = %o\n", Rmid, R0, R1, middle;
+      //printf "R_function(R0, eps) = %o\n", R_function(R0, eps);
+      //printf "eps = %o\n", eps;
     end while;
   end if;
   vprintf Theta: "After while loop, R0 = %o, R1 = %o\n", R0, R1;
 
   radius_ellipsoid := R1;
+  printf "radius ellipsoid = %o\n", R1;
   error_epsilon := R_function(R1, RR!0);
 
   vprint Theta: "Computing lattice points in translates of ellipsoid";
-  L := Lattice(Y);
-  ellipsoid_points := [Coordinates(L, L!Vector(el[1])) : el in ShortVectors(Lattice(Y), R1^2/pi)];
+  //L := Lattice(Y);
+  //L := LatticeWithBasis(T);
+  L := LatticeWithBasis(Transpose(T));
+  //printf "basis = %o\n", Basis(L);
+  //printf "R1^2/pi = %o\n", R1^2/pi;
+  //printf "short vectors = %o\n", [ComplexField(10)!el[2] : el in ShortVectors(Lattice(T), R1^2/pi)];
+  //ellipsoid_points := [Coordinates(L, L!Vector(el[1])) : el in ShortVectors(L, R1^2/pi)];
+  ellipsoid_points := [Coordinates(L, L!Vector(el[1])) : el in ShortVectors(L, R1^2/pi)];
+  ellipsoid_points cat:= [Eltseq(-Vector(v)) : v in ellipsoid_points];
   printf "initial #ellipsoid points = %o\n", #ellipsoid_points;
   for i := 1 to g do
     Lat1 := [];
@@ -223,6 +231,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   end for;
   oscillatory_part *:= (2*pi*I)^N;
   vprintf Theta: "\t\t= %o\n", oscillatory_part;
+  print "\n";
 
   result := factor*exponential_part*oscillatory_part;
   error_term := exponential_part*error_epsilon;
