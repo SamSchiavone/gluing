@@ -37,4 +37,14 @@ x := Real(z);
 y := [Imaginary(el) : el in z];
 Yinv := Inverse(Y);
 //y0 := Inverse(Y)*y;
+print "Testing theta";
+print "Should be 1.700489+1.03657im";
 Theta(z,tau);
+/*
+  print "Testing theta with dz = [1,0]";
+  print "Should be -13.73322+34.5327im";
+  Theta(z,tau : dz := [1,0]);
+*/
+print "Testing theta with char=[[1,0],[1,1]])";
+print "Should be -5.91176+4.90798im";
+Theta(z, tau : char := [[1,0], [1,1]]);

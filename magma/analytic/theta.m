@@ -82,6 +82,12 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
     char := [Vector([QQ!0 : i in [1..g]]) : j in [1,2]];
   end if;
   //if (#char[1] ne g) or (#char[2] ne g) then
+  if Type(char[1]) eq SeqEnum then
+    char := [Vector(el) : el in char];
+  end if;
+  if BaseRing(Parent(char[1])) eq Integers() then
+    char := [ChangeRing(c,QQ) : c in char];
+  end if;
   if (Ncols(char[1]) ne g) or (Ncols(char[2]) ne g) then
     error "characteristic must have length g";
   end if;
