@@ -1,6 +1,8 @@
 AttachSpec("spec");
 SetDebugOnError(true);
 prec := 300;
+SetDefaultRealFieldPrecision(prec);
+CC<I> := ComplexField(prec);
 R<x,y,z,w> := PolynomialRing(QQ,4);
 Q := x^2 + 2*y^2 + z^2 - w^2;
 F := 3*x^3 + y^3 - 7*z^3 + w^3;
@@ -19,12 +21,40 @@ tau := SmallPeriodMatrix(S);
 assert Max([Abs(Eltseq(Pi1^-1*Pi2)[i] - Eltseq(tau)[i]) : i in [1..#Eltseq(tau)]]) lt 10^-15;
 //omegas := S`DFF;
 // or omegas := HolomorphicDifferentials(S); ?
-cs := [];
-for i := 1 to 4 do
-  dz := [0,0,0,0];
-  dz[i] := 1;
-  Append(~cs,Theta([CC | 0,0,0,0], tau : char := [[1,0,0,0],[1,0,0,0]], dz := [dz]));
+
+function DotProductSeq(v1,v2)
+  assert #v1 eq #v2;
+  return &+[v1[i]*v2[i] : i in [1..#v2]];
+end function;
+
+Pow := CartesianPower(GF(2),g);
+chars := [];
+for v1 in Pow do
+  for v2 in Pow do
+    w1 := [ZZ!i : i in v1];
+    w2 := [ZZ!i : i in v2];
+    if DotProductSeq(w1, w2) mod 2 eq 1 then
+      Append(~chars, [w1, w2]);
+    end if;
+  end for;
 end for;
+
+
+tritangents := [];
+//for char in chars[1..4] do
+for char in chars[57..61] do
+  cs := [];
+  for i := 1 to 4 do
+    dz := [0,0,0,0];
+    dz[i] := 1;
+    Append(~cs, Theta([CC | 0,0,0,0], tau : char := char, dz := [dz]));
+  end for;
+  cs := Eltseq(Matrix(1,g,cs)*(Pi1^-1));
+  cs := [cs[i]/cs[g] : i in [1..g]];
+  Append(~tritangents, cs);
+end for;
+
+//Append(~cs,Theta([CC | 0,0,0,0], tau : char := [[1,0,0,0],[1,0,0,0]], dz := [dz]));
 
 basis := HolomorphicDifferentials(S);
 basis, M := Explode(basis);
@@ -42,25 +72,32 @@ Ccan := Image(phi);
 // Ccan; // LOL look at this thing
 
 CCUV<U,V> := PolynomialRing(CC,2);
-cs_new := Eltseq(Pi1*Matrix(g,1,cs));
+//cs_new := Eltseq(Pi1*Matrix(g,1,cs));
 //cs_new := Eltseq(Pi1^-1*Matrix(g,1,cs));
+tritangents0 := tritangents;
+tritangents := [Eltseq(Matrix(1,g,cs)*(Pi1^-1)) : cs in tritangents0];
 
 // PP^3 attempt
-CC4 := PolynomialRing(CC,4);
-xx := (1/cs_new[1])*&+[-cs_new[i]*CC4!R.i : i in [2..4]];
-xx := Evaluate(xx, [CC4.1,CC4.2,CC4.3,1]);
+
 eqns := DefiningEquations(Ccan);
 eqns := eqns[2..3];
-[Evaluate(el, [xx,CC4.2,CC4.3,1]) : el in eqns];
-evals := $1;
-#evals;
-r := Resultant(evals[1],evals[2],CC4.3);
-evals := [Evaluate(el, [xx,CC4.2,CC4.3,1]) : el in eqns];
-r := Resultant(evals[1],evals[2],CC4.3);
-r;
-CCt<t> := PolynomialRing(CC);
-r := Evaluate(r,[0,t,0,0]);
-Roots(r,CC);
+
+CC4 := PolynomialRing(CC,4);
+for cs_new in tritangents do
+  xx := (1/cs_new[1])*&+[-cs_new[i]*CC4!R.i : i in [2..4]];
+  xx := Evaluate(xx, [CC4.1,CC4.2,CC4.3,1]);
+  evals := [Evaluate(el, [xx,CC4.2,CC4.3,1]) : el in eqns];
+  #evals;
+  r := Resultant(evals[1],evals[2],CC4.3);
+  //r;
+  CCt<t> := PolynomialRing(CC);
+  r := Evaluate(r,[0,t,0,0]);
+  roots :=  Roots(r,CC);
+  roots := [el[1] : el in roots];
+  Sort(~roots,S`Ordering);
+  print roots;
+  print "------";
+end for;
 
 // pullback attempt
 phi_eqns := DefiningEquations(phi);
