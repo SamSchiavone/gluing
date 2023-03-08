@@ -1,7 +1,8 @@
 AttachSpec("spec");
 SetDebugOnError(true);
-prec := 300;
+prec := 40;
 SetDefaultRealFieldPrecision(prec);
+RR := RealField(prec);
 CC<I> := ComplexField(prec);
 R<x,y,z,w> := PolynomialRing(QQ,4);
 Q := x^2 + 2*y^2 + z^2 - w^2;
@@ -11,7 +12,7 @@ R2<u,v> := PolynomialRing(QQ,2);
 p := Resultant(Q,F,w);
 p := Evaluate(p, [R2.1, R2.2, 1, 0]);
 assert IsIrreducible(p);
-S := RiemannSurface(p);
+S := RiemannSurface(p : Precision := prec);
 Cplane := Curve(Spec(R2), p);
 g := Genus(S);
 Pi := BigPeriodMatrix(S);
@@ -41,20 +42,20 @@ end for;
 
 
 tritangents := [];
-//for char in chars[1..4] do
-for char in chars[57..61] do
+for char in chars[1..4] do
+//for char in chars[57..61] do
   cs := [];
-  for i := 1 to 4 do
+  for i := 1 to g do
     dz := [0,0,0,0];
     dz[i] := 1;
-    Append(~cs, Theta([CC | 0,0,0,0], tau : char := char, dz := [dz]));
+    Append(~cs, Theta([CC | 0,0,0,0], tau : char := char, dz := [dz], prec := prec));
   end for;
   cs := Eltseq(Matrix(1,g,cs)*(Pi1^-1));
   cs := [cs[i]/cs[g] : i in [1..g]];
   Append(~tritangents, cs);
 end for;
 
-//Append(~cs,Theta([CC | 0,0,0,0], tau : char := [[1,0,0,0],[1,0,0,0]], dz := [dz]));
+//Append(~cs,Theta([CC | 0,0,0,0], tau : char := [[1,0,0,0],[1,0,0,0]], dz := [dz], prec := prec));
 
 basis := HolomorphicDifferentials(S);
 basis, M := Explode(basis);
@@ -74,8 +75,8 @@ Ccan := Image(phi);
 CCUV<U,V> := PolynomialRing(CC,2);
 //cs_new := Eltseq(Pi1*Matrix(g,1,cs));
 //cs_new := Eltseq(Pi1^-1*Matrix(g,1,cs));
-tritangents0 := tritangents;
-tritangents := [Eltseq(Matrix(1,g,cs)*(Pi1^-1)) : cs in tritangents0];
+//tritangents0 := tritangents;
+//tritangents := [Eltseq(Matrix(1,g,cs)*(Pi1^-1)) : cs in tritangents0];
 
 // PP^3 attempt
 
