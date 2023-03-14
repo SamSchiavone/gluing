@@ -70,13 +70,7 @@ end for;
 //diffs := Matrix(1,#sections,sections)*ChangeRing(M,Parent(sections[1]));
 phi := map< Cplane -> ProjectiveSpace(QQ,3) | Eltseq(diffs)>;
 Ccan := Image(phi);
-// Ccan; // LOL look at this thing
-
-CCUV<U,V> := PolynomialRing(CC,2);
-//cs_new := Eltseq(Pi1*Matrix(g,1,cs));
-//cs_new := Eltseq(Pi1^-1*Matrix(g,1,cs));
-//tritangents0 := tritangents;
-//tritangents := [Eltseq(Matrix(1,g,cs)*(Pi1^-1)) : cs in tritangents0];
+Ccan;
 
 // PP^3 attempt
 
@@ -88,7 +82,6 @@ for cs_new in tritangents do
   xx := (1/cs_new[1])*&+[-cs_new[i]*CC4!R.i : i in [2..4]];
   xx := Evaluate(xx, [CC4.1,CC4.2,CC4.3,1]);
   evals := [Evaluate(el, [xx,CC4.2,CC4.3,1]) : el in eqns];
-  #evals;
   r := Resultant(evals[1],evals[2],CC4.3);
   //r;
   CCt<t> := PolynomialRing(CC);
@@ -101,6 +94,8 @@ for cs_new in tritangents do
 end for;
 
 // pullback attempt
+
+CCUV<U,V> := PolynomialRing(CC,2);
 phi_eqns := DefiningEquations(phi);
 f := &+[ cs[i]*CCUV!phi_eqns[i] : i in [1..#cs]];
 fplane := CCUV!DefiningEquation(Cplane);
