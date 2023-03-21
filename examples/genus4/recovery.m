@@ -14,7 +14,6 @@ p := Resultant(Q,F,w);
 p := Evaluate(p, [R2.1, R2.2, 1, 0]);
 assert IsIrreducible(p);
 S := RiemannSurface(p : Precision := prec);
-Cplane := Curve(Spec(R2), p);
 g := Genus(S);
 Pi := BigPeriodMatrix(S);
 //Pi1, Pi2 := SplitBigPeriodMatrix(Pi)
