@@ -100,6 +100,9 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   // tau := X + I*Y
   X := Real(tau);
   Y := Imaginary(tau);
+  if not IsSymmetric(Y) then
+    Y := (1/2)*(Y + Transpose(Y));
+  end if;
   // Find T upper-triangular with transpose(T)*T = Y
   T := Transpose(Cholesky(Y));
   vprintf Theta: "Cholesky decomposition T = %o\n", T;
