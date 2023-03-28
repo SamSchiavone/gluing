@@ -17,8 +17,8 @@ p := Evaluate(p, [R2.1, R2.2, 1, 0]);
 assert IsIrreducible(p);
 S := RiemannSurface(p : Precision := prec);
 g := Genus(S);
-Pi := BigPeriodMatrix(S);
-Pi1, Pi2 := SplitBigPeriodMatrix(Pi);
+Pi_big := BigPeriodMatrix(S);
+Pi1, Pi2 := SplitBigPeriodMatrix(Pi_big);
 tau := SmallPeriodMatrix(S);
 //assert Max([Abs(Eltseq(Pi1^-1*Pi2)[i] - Eltseq(tau)[i]) : i in [1..#Eltseq(tau)]]) lt 10^(-prec/3);
 
@@ -43,7 +43,7 @@ tritangents := [];
 for s in steiner[1..7] do
   new := [];
   for char in s do
-    Append(~new, TritangentPlane(Pi, char));
+    Append(~new, TritangentPlane(Pi_big, char));
   end for;
   Append(~tritangents, new);
 end for;
@@ -87,7 +87,72 @@ function ModuliFromTheta(thetas);
   return [a1,a2,a3,ap1,ap2,ap3,as1,as2,as3];
 end function;
 
-ModuliFromTheta(thetas);
+mods := ModuliFromTheta(thetas);
+
+function RiemannModelFromModuli(mods);
+  a1:=mods[1];a2:=mods[2];a3:=mods[3];
+  ap1:=mods[4];ap2:=mods[5];ap3:=mods[6];
+  as1:=mods[7];as2:=mods[8];as3:=mods[9];
+  F:=Parent(a1);
+  P<x1,x2,x3>:=PolynomialRing(F,3);
+  k:=1;kp:=1;ks:=1;
+  M:=Matrix([[1,1,1],[k*a1,k*a2,k*a3],[kp*ap1,kp*ap2,kp*ap3]]);
+  Mb:=Matrix([[1,1,1],[1/a1,1/a2,1/a3],[1/ap1,1/ap2,1/ap3]]);
+  U:=-Mb^(-1)*M;
+  u1:=U[1];
+  u2:=U[2];
+  u3:=U[3];
+  u1:=u1[1]*x1+u1[2]*x2+u1[3]*x3;
+  u2:=u2[1]*x1+u2[2]*x2+u2[3]*x3;
+  u3:=u3[1]*x1+u3[2]*x2+u3[3]*x3;
+  return (x1*u1+x2*u2-x3*u3)^2-4*x1*u1*x2*u2, u1, u2, u3;
+end function;
+
+
+// compute bitangents of genus 3 curve
+bitangents := [ [CC | 1, 0, 0], [CC | 0,1,0], [CC | 0,0,1], [CC | 1,1,1]];
+bitangents cat:= mods_mat;
+F, u0, u1, u2 := RiemannModelFromModuli(mods);
+bitangents cat:= [Coefficients(el) : el in [u0, u1, u2]];
+CC3<t0,t1,t2> := Parent(u0);
+bitangents cat:= [Coefficients(el) : el in [t0+t1+u2, t0+u1+t2, u0+t1+t2]];
+
+// (3)
+for i := 1 to 3 do
+  new := u0/mods_mat[1,1] + ks[i,1]*(mods_mat[2,i]*t1 + mods_mat[3,i]*t2);
+  Append(~bitangents, Coefficients(new));
+end for;
+// (4)
+for i := 1 to 3 do
+  new := u1/mods_mat[2,1] + ks[i,1]*(mods_mat[1,i]*t0 + mods_mat[3,i]*t2);
+  Append(~bitangents, Coefficients(new));
+end for;
+// (5)
+for i := 1 to 3 do
+  new := u2/mods_mat[3,1] + ks[i,1]*(mods_mat[1,i]*t0 + mods_mat[2,i]*t1);
+  Append(~bitangents, Coefficients(new));
+end for;
+// (6)
+for i := 1 to 3 do
+  new := u0/(1-ks[i,1]*mods_mat[2,i]*mods_mat[3,i]) + u1/(1-ks[i,1]*mods_mat[1,i]*mods_mat[3,i]) + u2/(1-ks[i,1]*mods_mat[1,i]*mods_mat[2,i]);
+  Append(~bitangents, Coefficients(new));
+end for;
+// (7)
+for i := 1 to 3 do
+  new := u0/(mods_mat[1,i]*(1-ks[i,1]*mods_mat[2,i]*mods_mat[3,i])) + u1/(mods_mat[2,i]*(1-ks[i,1]*mods_mat[1,i]*mods_mat[3,i])) + u2/(mods_mat[3,i]*(1-ks[i,1]*mods_mat[1,i]*mods_mat[2,i]));
+  Append(~bitangents, Coefficients(new));
+end for;
+
+fsq_mat := [];
+for f in fs do  
+  cs := [];
+  for m in mons do
+    Append(~cs, MonomialCoefficient(f^2,m)); 
+  end for;
+  Append(~fsq_mat, cs);
+end for;
+fsq_mat := Matrix(fsq_mat);
+NumericalKernel(fsq_mat);
 
 CC4<X,Y,Z,W> := PolynomialRing(CC,4);
 ells := [&+[c[1][i]*CC4.i : i in [1..g] ]: c in tritangents];
@@ -99,3 +164,165 @@ for cs_new in tritangents do
   print cs_new;
   TritangentSanityCheck(Ccan, cs_new);
 end for;
+
+/*
+A := Matrix(3,3,mods);
+A := Matrix(3,3,[1/el : el in mods]);
+A^-1;
+$1*Matrix(3,1,[-1,-1,-1]);
+A^-1;
+Ainv := $1;
+Ainv*Matrix(3,1,[BaseRing(Parent(Ainv)) | -1,-1,-1]);
+lambdas := $1;
+mods;
+mods_mat := [[mods[i], mods[i+1], mods[i+2]] : i in [1,4,7]];
+mods_mat;
+mods_mat_scaled := [];
+for i := 1 to 3 do
+DiagonalMatrix(lambdas);
+DiagonalMatrix(3,3,lambdas);
+DiagonalMatrix;
+lambdas;
+DiagonalMatrix(Eltseq(lambdas));
+L := $1;
+B := Matrix(3,3,mods)*L;
+Binv := Inverse(B);
+Binv*Matrix(3,1,[BaseRing(Parent(Binv)) | -1,-1,-1]);
+ks := $1;
+bitangents := [];
+*/
+
+/*
+bitangents[1..7];
+M;
+M := Matrix(bitangents[1..7]);
+NumericalKernel(Transpose(M));
+NumericalKernel(M);
+K := $1;
+K;
+Rows(K);
+Krows := $1;
+Krows[1];
+[el/Krows[1][3] : el in Krows[1]];
+[el/Krows[1][3] : el in Eltseq(Krows[1])];
+[el/Krows[1][#Krows[1]] : el in Eltseq(Krows[1])];
+[el/Krows[1][#Eltseq(Krows[1])] : el in Eltseq(Krows[1])];
+[el/Krows[1][1] : el in Eltseq(Krows[1])];
+bitangents[1..7];
+CC3;
+CC3.1;
+fs := [[el[i]*CC3.i : i in [1..3] : el in bitangents]];
+fs := [[el[i]*CC3.i : i in [1..3]] : el in bitangents];
+fs[1];
+fs := [&+[el[i]*CC3.i : i in [1..3]] : el in bitangents];
+fs[1];
+fs[7]^2;
+fs_mat := [];
+for f in fs do
+fsq_math := [];
+for f in fs do
+fs[1];
+Coefficients($1);
+CoefficientsAndMonomials(fs[1]);
+Coefficients;
+AttachSpec("~/github/CHIMP/CHIMP.spec");
+Abseltseq;
+AbsEltseq;
+AbsEltseq(fs[1]);
+AbsEltseq:Maximal;
+for f in fs do
+cs := Coefficients(f);
+while #cs lt 4 do
+for f in fs do
+fsq_math;
+fsq_mat := [];
+delete fsq_math;
+for f in fs do
+cs := Coefficients(f^2);
+fs[4];
+$^1;
+fs[4]^2;
+Coefficients($1);
+#$1;
+for f in fs do
+cs := Coefficients(f^2);
+while #cs lt 6 do
+Append(~cs,0);
+Coefficients(fs[2]^2);
+fs[2]^2;
+AbsEltseq;
+MonomialsOfDegree(CC3,2);
+mons := Eltseq($1);
+MonomialsOfDegree(CC3,2);
+mons := $1;
+mons[3];
+for m in mons do
+print Coefficient(fs[2]^2,m);
+end for;
+Coefficient(fs[2]^2,CC3.2);
+MonomialCoefficient;
+for m in mons do
+MonomialCoefficient(fs[2]^2,CC3.2);
+end for;
+for m in mons do
+MonomialCoefficient(fs[2]^2,m);
+end for;
+for f in fs do
+cs := [];
+for m in mons do
+Append(~cs, MonomialCoefficients(f^2,m));
+end for;
+end for;
+for f in fs do
+cs := [];
+for m in mons do
+Append(~cs, MonomialCoefficient(f^2,m));
+end for;
+end for;
+#fsq_mat[1];
+fsq_mat;
+fsq_mat := [];
+for f in fs do  
+  cs := [];
+  for m in mons do
+    Append(~cs, MonomialCoefficient(f^2,m)); 
+  end for;
+  Append(~fsq_mat, cs);
+end for;
+fsq_mat[1];
+fsq_mat := Matrix(fsq_mat);
+NumericalKernel(fsq_mat);
+ss := $1;
+#ss;
+ss[1];
+ss := Eltseq(ss);
+#ss;
+fsq_mat;
+Nrows(fsq_mat);
+#fs;
+fs := f[1..7];
+fs := fs[1..7];
+fsq_mat := [];
+for f in fs do  
+  cs := [];
+  for m in mons do
+    Append(~cs, MonomialCoefficient(f^2,m)); 
+  end for;
+  Append(~fsq_mat, cs);
+end for;
+fsq_mat := [];
+for f in fs do  
+  cs := [];
+  for m in mons do
+    Append(~cs, MonomialCoefficient(f^2,m)); 
+  end for;
+  Append(~fsq_mat, cs);
+end for;
+fsq_mat := Matrix(fsq_mat);
+NumericalKernel(fsq_mat);
+K := $1;
+Dimension(K);
+Eltseq(K);
+ss := $1;
+tritangents[1];
+*/
