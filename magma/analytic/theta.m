@@ -106,9 +106,9 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   // Find T upper-triangular with transpose(T)*T = Y
   T := Transpose(Cholesky(Y));
   vprintf Theta: "Cholesky decomposition T = %o\n", T;
-  printf "Y = %o\n", Y;
-  printf "T^t * T = %o\n", Transpose(T)*T;
-  printf "T * T^t = %o\n", T*Transpose(T);
+  //printf "Y = %o\n", Y;
+  //printf "T^t * T = %o\n", Transpose(T)*T;
+  //printf "T * T^t = %o\n", T*Transpose(T);
 
   //L := LatticeWithBasis(Transpose(T));
   n := Floor(prec*Log(2)/Log(10));
@@ -129,7 +129,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   */
   N := #dz;
   R0 := (1/2)*(Sqrt(CC!(g + 2*N + Sqrt(CC!(g^2 + 8*N)))) + rho);
-  printf "initial R0 = %o with precision %o\n", R0, Precision(R0);
+  //printf "initial R0 = %o with precision %o\n", R0, Precision(R0);
 
   T_inv_norm := L2Norm(Inverse(T));
 
@@ -181,7 +181,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   vprintf Theta: "After while loop, R0 = %o, R1 = %o\n", R0, R1;
 
   radius_ellipsoid := R1;
-  printf "radius ellipsoid = %o\n", R1;
+  //printf "radius ellipsoid = %o\n", R1;
   error_epsilon := R_function(R1, RR!0);
 
   vprint Theta: "Computing lattice points in translates of ellipsoid";
@@ -194,7 +194,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   //ellipsoid_points := [Coordinates(L, L!Vector(el[1])) : el in ShortVectors(L, R1^2/pi)];
   ellipsoid_points := [Coordinates(L, L!Vector(el[1])) : el in ShortVectors(L, R1^2/pi)];
   ellipsoid_points cat:= [Eltseq(-Vector(v)) : v in ellipsoid_points];
-  printf "initial #ellipsoid points = %o\n", #ellipsoid_points;
+  //printf "initial #ellipsoid points = %o\n", #ellipsoid_points;
   for i := 1 to g do
     Lat1 := [];
     pad := Vector([0 : i in [1..g]]);
@@ -208,7 +208,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
     ellipsoid_points cat:= [Eltseq(Vector(el)) : el in Lat1];
   end for;
   ellipsoid_points := Setseq(Seqset(ellipsoid_points));
-  printf "final #ellipsoid points = %o\n", #ellipsoid_points;
+  //printf "final #ellipsoid points = %o\n", #ellipsoid_points;
   //printf "ellipsoid points = %o\n", ellipsoid_points;
   if #Eltseq(dz) ne 0 then
     dz := Matrix(dz);
@@ -231,8 +231,8 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
     end if;
   end for;
 
-  print "derivatives matrix after combining";
-  print dz;
+  //print "derivatives matrix after combining";
+  //print dz;
 
   if #Eltseq(dz) ne 0 then
     N := Nrows(dz);
@@ -271,7 +271,7 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   end for;
   oscillatory_part *:= (2*pi*I)^N;
   vprintf Theta: "\t\t= %o\n", oscillatory_part;
-  print "\n";
+  vprint Theta: "\n";
 
   result := factor*exponential_part*oscillatory_part;
   error_term := exponential_part*error_epsilon;
