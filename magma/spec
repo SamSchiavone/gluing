@@ -7,6 +7,7 @@
     galois.m
     gluings.m
     theta.m
+    reconstruction.m
   }
   interpolated
   {
