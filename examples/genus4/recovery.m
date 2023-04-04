@@ -50,14 +50,15 @@ end for;
 
 chars_even := EvenThetaCharacteristics(3);
 eps := chars_even[1];
-eta_sqs := AssociativeArray();
+eta_sqs := AssociativeArray(); // now just etas
 for delta in chars_even do
   print delta;
   eps_new1 := [[0] cat el : el in eps];
   eps_new2 := [[0] cat eps[1], [1] cat eps[2]];
   delta_new1 := [[0] cat el : el in delta];
   delta_new2 := [[0] cat delta[1], [1] cat delta[2]];
-  eta_sqs[[eps, delta]] := (Theta([CC!0 : i in [1..g]], tau : char := eps_new1)*Theta([CC!0 : i in [1..g]], tau : char := eps_new2))/(Theta([CC!0 : i in [1..g]], tau : char := delta_new1)*Theta([CC!0 : i in [1..g]], tau : char := delta_new2)); 
+  // formula from Lemma 1 (p. 148) of Farkas
+  eta_sqs[[eps, delta]] := Sqrt((Theta([CC!0 : i in [1..g]], tau : char := eps_new1)*Theta([CC!0 : i in [1..g]], tau : char := eps_new2))/(Theta([CC!0 : i in [1..g]], tau : char := delta_new1)*Theta([CC!0 : i in [1..g]], tau : char := delta_new2)));  // TODO: fix signs here
 end for;
 
 thetas := [];
@@ -110,6 +111,7 @@ end function;
 
 
 // compute bitangents of genus 3 curve
+// formulas from Theorem 6.1.9 (p. 230) of Dolgachev
 bitangents := [ [CC | 1, 0, 0], [CC | 0,1,0], [CC | 0,0,1], [CC | 1,1,1]];
 bitangents cat:= mods_mat;
 F, u0, u1, u2 := RiemannModelFromModuli(mods);
@@ -152,7 +154,72 @@ for f in fs do
   Append(~fsq_mat, cs);
 end for;
 fsq_mat := Matrix(fsq_mat);
-NumericalKernel(fsq_mat);
+K := NumericalKernel(fsq_mat);
+
+// TODO: clean this up
+// copy-paste from Yuwei's example Magma-Schottky-Igusa-form file
+/*using magma to compute the Schottky form*/
+//C := ComplexField(prec);
+prec := 30;
+C := CC;
+char := Matrix(C, 8, 1, [0,0,0,0,0,0,0,0]);
+z := Matrix(C, 4, 1, [0,0,0,0]);
+
+m1 := 1/2*Matrix(C, 8, 1, [1,0,1,0,1,0,1,0]);
+m2 := 1/2*Matrix(C, 8, 1, [0,0,0,1,1,0,0,0]);
+m3 := 1/2*Matrix(C, 8, 1, [0,0,1,1,1,0,1,1]);
+n0 := Matrix(C, 8, 1, [0,0,0,0,0,0,0,0]);
+n1 := 1/2*Matrix(C, 8, 1, [0,0,0,1,1,1,1,0]);
+n2 := 1/2*Matrix(C, 8, 1, [0,0,1,1,0,0,0,1]);
+n3 := 1/2*Matrix(C, 8, 1, [0,0,1,0,1,0,1,1]);
+n4 := n1+n2;
+n5 := n1+n3;
+n6 := n2+n3;
+n7 := n1+n2+n3;
+SchottkyN := [n0,n1,n2,n3,n4,n5,n6,n7];
+M1 := [m1 + n: n in SchottkyN];
+M2 := [m2 + n: n in SchottkyN];
+M3 := [m3 + n: n in SchottkyN];
+pi1 := 1;
+pi2 := 1;
+pi3 := 1;
+
+function CharacteristicMatrixToPair(c)
+  ZZ := Integers();
+  QQ := Rationals();
+  c *:= 2;
+  c := [QQ!(ZZ!(GF(2)!(ZZ!el))) : el in Eltseq(c)];
+  return [c[1..4], c[5..8]];
+end function;
+
+M1 := [CharacteristicMatrixToPair(el) : el in M1];
+M2 := [CharacteristicMatrixToPair(el) : el in M2];
+M3 := [CharacteristicMatrixToPair(el) : el in M3];
+
+z := Eltseq(z);
+for m in M1 do
+    //pi1 := pi1* Theta(m, z, tau);
+  pi1 := pi1*Theta(z, tau : char := m, prec := prec);
+end for;
+
+for m in M2 do
+    //pi2 := pi2* Theta(m, z, tau);
+  pi2 := pi2*Theta(z, tau : char := m, prec := prec);
+end for;
+
+for m in M3 do
+    //pi3 := pi3* Theta(m, z, tau);
+  pi3 := pi3*Theta(z, tau : char := m, prec := prec);
+end for;
+
+Schottky := pi1^2 + pi2^2 + pi3^2 - 2*(pi1*pi2 + pi2*pi3 + pi1*pi3);
+Schottky;
+
+// next, take derivative of Schottky modular form wrt to tau
+// this will give the quadric
+
+
+/* ------------------------------------------ */
 
 CC4<X,Y,Z,W> := PolynomialRing(CC,4);
 ells := [&+[c[1][i]*CC4.i : i in [1..g] ]: c in tritangents];
