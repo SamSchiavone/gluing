@@ -110,10 +110,18 @@ function RiemannModelFromModuli(mods);
 end function;
 
 
+A := Matrix(3,3,[1/el : el in mods]);
+Ainv := A^-1;
+lambdas := (A^-1)*Matrix(3,1,[BaseRing(Parent(A)) | -1,-1,-1]);
+mods_mat := [[mods[i], mods[i+1], mods[i+2]] : i in [1,4,7]];
+L := DiagonalMatrix(Eltseq(lambdas));
+B := Matrix(3,3,mods)*L;
+ks := (B^-1)*Matrix(3,1,[BaseRing(Parent(B)) | -1,-1,-1]);
+
 // compute bitangents of genus 3 curve
 // formulas from Theorem 6.1.9 (p. 230) of Dolgachev
 bitangents := [ [CC | 1, 0, 0], [CC | 0,1,0], [CC | 0,0,1], [CC | 1,1,1]];
-bitangents cat:= mods_mat;
+//bitangents cat:= mods_mat;
 F, u0, u1, u2 := RiemannModelFromModuli(mods);
 bitangents cat:= [Coefficients(el) : el in [u0, u1, u2]];
 CC3<t0,t1,t2> := Parent(u0);
@@ -145,7 +153,9 @@ for i := 1 to 3 do
   Append(~bitangents, Coefficients(new));
 end for;
 
+fs := [&+[el[i]*CC3.i : i in [1..3]] : el in bitangents];
 fsq_mat := [];
+mons := MonomialsOfDegree(CC3,2);
 for f in fs do  
   cs := [];
   for m in mons do
@@ -156,11 +166,7 @@ end for;
 fsq_mat := Matrix(fsq_mat);
 K := NumericalKernel(fsq_mat);
 
-// TODO: clean this up
 // copy-paste from Yuwei's example Magma-Schottky-Igusa-form file
-/*using magma to compute the Schottky form*/
-//C := ComplexField(prec);
-
 function CharacteristicMatrixToPair(c)
   ZZ := Integers();
   QQ := Rationals();
