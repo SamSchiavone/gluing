@@ -160,60 +160,46 @@ K := NumericalKernel(fsq_mat);
 // copy-paste from Yuwei's example Magma-Schottky-Igusa-form file
 /*using magma to compute the Schottky form*/
 //C := ComplexField(prec);
-prec := 30;
-C := CC;
-char := Matrix(C, 8, 1, [0,0,0,0,0,0,0,0]);
-z := Matrix(C, 4, 1, [0,0,0,0]);
-
-m1 := 1/2*Matrix(C, 8, 1, [1,0,1,0,1,0,1,0]);
-m2 := 1/2*Matrix(C, 8, 1, [0,0,0,1,1,0,0,0]);
-m3 := 1/2*Matrix(C, 8, 1, [0,0,1,1,1,0,1,1]);
-n0 := Matrix(C, 8, 1, [0,0,0,0,0,0,0,0]);
-n1 := 1/2*Matrix(C, 8, 1, [0,0,0,1,1,1,1,0]);
-n2 := 1/2*Matrix(C, 8, 1, [0,0,1,1,0,0,0,1]);
-n3 := 1/2*Matrix(C, 8, 1, [0,0,1,0,1,0,1,1]);
-n4 := n1+n2;
-n5 := n1+n3;
-n6 := n2+n3;
-n7 := n1+n2+n3;
-SchottkyN := [n0,n1,n2,n3,n4,n5,n6,n7];
-M1 := [m1 + n: n in SchottkyN];
-M2 := [m2 + n: n in SchottkyN];
-M3 := [m3 + n: n in SchottkyN];
-pi1 := 1;
-pi2 := 1;
-pi3 := 1;
 
 function CharacteristicMatrixToPair(c)
   ZZ := Integers();
   QQ := Rationals();
-  c *:= 2;
-  c := [QQ!(ZZ!(GF(2)!(ZZ!el))) : el in Eltseq(c)];
+  c := [QQ!(ZZ!el) : el in Eltseq(c)];
   return [c[1..4], c[5..8]];
 end function;
 
-M1 := [CharacteristicMatrixToPair(el) : el in M1];
-M2 := [CharacteristicMatrixToPair(el) : el in M2];
-M3 := [CharacteristicMatrixToPair(el) : el in M3];
+function MakeSchottkyCharacteristics()
+  C := GF(2);
+  m1 := Matrix(C, 8, 1, [1,0,1,0,1,0,1,0]);
+  m2 := Matrix(C, 8, 1, [0,0,0,1,1,0,0,0]);
+  m3 := Matrix(C, 8, 1, [0,0,1,1,1,0,1,1]);
+  n0 := Matrix(C, 8, 1, [0,0,0,0,0,0,0,0]);
+  n1 := Matrix(C, 8, 1, [0,0,0,1,1,1,1,0]);
+  n2 := Matrix(C, 8, 1, [0,0,1,1,0,0,0,1]);
+  n3 := Matrix(C, 8, 1, [0,0,1,0,1,0,1,1]);
+  n4 := n1+n2;
+  n5 := n1+n3;
+  n6 := n2+n3;
+  n7 := n1+n2+n3;
+  SchottkyN := [n0,n1,n2,n3,n4,n5,n6,n7];
+  Ms := [[el + n: n in SchottkyN] : el in [m1,m2,m3]];
+  return [[CharacteristicMatrixToPair(el) : el in M] : M in Ms];
+end function;
 
-z := Eltseq(z);
-for m in M1 do
-    //pi1 := pi1* Theta(m, z, tau);
-  pi1 := pi1*Theta(z, tau : char := m, prec := prec);
-end for;
-
-for m in M2 do
-    //pi2 := pi2* Theta(m, z, tau);
-  pi2 := pi2*Theta(z, tau : char := m, prec := prec);
-end for;
-
-for m in M3 do
-    //pi3 := pi3* Theta(m, z, tau);
-  pi3 := pi3*Theta(z, tau : char := m, prec := prec);
-end for;
-
-Schottky := pi1^2 + pi2^2 + pi3^2 - 2*(pi1*pi2 + pi2*pi3 + pi1*pi3);
-Schottky;
+function SchottkyModularForm(z, tau)
+  prec := Precision(Parent(tau));
+  z := Eltseq(z);
+  Ms := MakeSchottkyCharacteristics();
+  pis := [];
+  for M in Ms do
+    pi := 1;
+    for m in M do
+      pi *:= Theta(z, tau : char := m, prec := prec);
+    end for;
+    Append(pis, pi);
+  end for;
+  return pis[1]^2 + pis[2]^2 + pis[3]^2 - 2*(pis[1]*pis[2] + pis[2]*pis[3] + pis[1]*pis[3]);
+end function;
 
 // next, take derivative of Schottky modular form wrt to tau
 // this will give the quadric
