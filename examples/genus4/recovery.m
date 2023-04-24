@@ -1,6 +1,7 @@
 AttachSpec("spec");
 AttachSpec("~/github/CHIMP/CHIMP.spec");
 Attach("~/github/gluing/magma/analytic/reconstruction.m");
+//load "analytic/signs.m";
 SetDebugOnError(true);
 //prec := 40;
 prec := 15;
@@ -21,6 +22,12 @@ Pi_big := BigPeriodMatrix(S);
 Pi1, Pi2 := SplitBigPeriodMatrix(Pi_big);
 tau := SmallPeriodMatrix(S);
 //assert Max([Abs(Eltseq(Pi1^-1*Pi2)[i] - Eltseq(tau)[i]) : i in [1..#Eltseq(tau)]]) lt 10^(-prec/3);
+ 
+SetProfile(true);
+time Theta([CC!0 : i in [1..g]], tau);
+G := ProfileGraph();
+ProfilePrintByTotalTime(G : Percentage);
+
 
 chars := OddThetaCharacteristics(g);
 
@@ -62,12 +69,12 @@ for delta in chars_even do
 end for;
 
 thetas := [];
-for i := 1 to 63 do
-  s := Intseq(i,2,6);
+for i := 1 to 64 do
+  s := Intseq(i mod 64,2,6);
   s := Reverse(s);
   delta := [s[1..3], s[4..6]];
   if IsDefined(eta_sqs, [eps,delta]) then
-    Append(~thetas, Sqrt(eta_sqs[[eps,delta]])); // sign???
+    Append(~thetas, eta_sqs[[eps,delta]]); // sign???
   else
     Append(~thetas, 0);
   end if;
@@ -193,7 +200,7 @@ function MakeSchottkyCharacteristics()
 end function;
 
 function SchottkyModularForm(z, tau)
-  prec := Precision(Parent(tau));
+  prec := Precision(BaseRing(Parent(tau)));
   z := Eltseq(z);
   Ms := MakeSchottkyCharacteristics();
   pis := [];
@@ -213,6 +220,7 @@ end function;
 
 /* ------------------------------------------ */
 
+/*
 CC4<X,Y,Z,W> := PolynomialRing(CC,4);
 ells := [&+[c[1][i]*CC4.i : i in [1..g] ]: c in tritangents];
 ell_ps := [&+[c[2][i]*CC4.i : i in [1..g] ]: c in tritangents];
@@ -223,6 +231,8 @@ for cs_new in tritangents do
   print cs_new;
   TritangentSanityCheck(Ccan, cs_new);
 end for;
+*/
+
 
 /*
 A := Matrix(3,3,mods);
