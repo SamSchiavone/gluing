@@ -1,6 +1,7 @@
-AttachSpec("/home/sijsling/g4rec/gluing/magma/spec");
+AttachSpec("/home/apieper/gluing-g4/magma/spec");
 prec := 30;
 SetDefaultRealFieldPrecision(prec);
+QQ:=Rationals();
 R<x,y,z,w> := PolynomialRing(QQ,4);
 Q := x^2 + 2*y^2 + z^2 - w^2;
 F := 3*x^3 + y^3 - 7*z^3 + w^3;
@@ -23,7 +24,7 @@ steinerrie:=[];
 //1st 7 form an aronhold set.
 aronhold:=[[[1,1,1],[1,1,1]],[[0,0,1],[0,1,1]],[[0,1,1],[0,0,1]],[[1,0,1],[1,0,0]],[[1,0,0],[1,0,1]],[[1,1,0],[0,1,0]],[[0,1,0],[1,1,0]], [[0,1,0],[0,1,0]], [[1,0,0],[1,1,0]], [[1,1,0],[1,0,0]]];
 rie:=[[[0,0,0],[0,0,1]],[[0,0,0],[1,0,1]],[[0,0,0],[0,1,1]],[[0,0,0],[1,1,1]],[[0,0,1],[0,0,0]],[[0,0,1],[1,0,0]],[[0,0,1],[0,1,0]], [[0,0,1],[1,1,0]],[[0,0,0],[1,1,0]],[[0,0,0],[0,0,0]],[[0,0,0],[0,1,0]],[[0,0,0],[1,0,0]]];
-r:=9;
+r:=10;
 
 
 
@@ -166,8 +167,8 @@ for i := 1 to 3 do
 end for;
 
 
-bitangents:=bitangents[1..r];
-r:=9;
+
+
 fs := [&+[el[i]*CC3.i : i in [1..3]] : el in bitangents[1..r]];
 mons:=MonomialsOfDegree(CC3,2);
 
@@ -194,7 +195,7 @@ mats2:=[[(Matrix(4,1, tritangents[i][1])*Matrix(1,4, tritangents[i][2]) * si[j][
 mats2:=[[(m +Transpose(m))/2 : m in mats2[j]] : j in [1..sirows-1]];
 mats:=[mats1] cat mats2;
 X:=HorizontalJoin([Matrix(  [&cat[[m[i,j]: j in [i..4]]: i in [1..4]] : m in mats[j]]  ): j in [1..sirows]]);
-gammai:=NumericalSolution(X, W);
+gammai:=NumericalSolution(X, W: Epsilon:=RR!10^(-15));
 gammai:=Eltseq(gammai1/gammai1[1,1]);
 
 
@@ -202,12 +203,10 @@ gammai:=Eltseq(gammai1/gammai1[1,1]);
 
 
 //Compute gammai without Q:
-si:=EchelonForm(si);
-Di:=[Eltseq(si[j]): j in [1..sirows]];
 mats1new:=[(Matrix(4,1, tritangents[i][1])*Matrix(1,4, tritangents[i][2])): i in [1..r]];
 mats1new:=[(m +Transpose(m))/2 : m in mats1new];
 Xnew:=Matrix([&cat[[m[i,j]: j in [i..4]]: i in [1..4]] : m in mats1new]  );
-vi:=NumericalKernel(Xnew);
-N:=HorizontalJoin([  DiagonalMatrix(vi[i])*fsq_mat : i in [1..Nrows(vi) ]]);
-gammaiinv:=NumericalKernel(N);
+vi:=NumericalKernel(Xnew: Epsilon:=RR!10^(-15));
+N:=HorizontalJoin([  DiagonalMatrix(Eltseq(vi[i]))*fsq_mat : i in [1..Nrows(vi) ]]);
+gammaiinv:=NumericalKernel(N: Epsilon:=RR!(10^(-15)));
 
