@@ -16,8 +16,10 @@ Pi_big := BigPeriodMatrix(S);
 Pi1, Pi2 := SplitBigPeriodMatrix(Pi_big);
 tau := SmallPeriodMatrix(S);
 CC:=BaseRing(tau);
+RR:=RealField(prec);
 Quadric:= Matrix(CC, 4,4, [[1,0,0,4/7],[0,4/7,0,0], [0,0, 4/7, 0], [4/7, 0,0,2/7]]);
 
+T:=Time();
 v := Vector([GF(2) | 0, 0, 0, 0, 1, 0, 0, 0 ]);
 steiner := [];
 steinerrie:=[];
@@ -203,10 +205,101 @@ gammai:=Eltseq(gammai1/gammai1[1,1]);
 
 
 //Compute gammai without Q:
+//
+//
+CC4:=PolynomialRing(CC,4);
+x:=Matrix(4,1,[CC4.i: i in [1..4]]);
 mats1new:=[(Matrix(4,1, tritangents[i][1])*Matrix(1,4, tritangents[i][2])): i in [1..r]];
 mats1new:=[(m +Transpose(m))/2 : m in mats1new];
+mats1newx:=Matrix(CC4, 1,r,[(Transpose(x)*ChangeRing(mats1new[i], CC4)*x)[1,1]: i in [1..r]]);
+
 Xnew:=Matrix([&cat[[m[i,j]: j in [i..4]]: i in [1..4]] : m in mats1new]  );
 vi:=NumericalKernel(Xnew: Epsilon:=RR!10^(-15));
 N:=HorizontalJoin([  DiagonalMatrix(Eltseq(vi[i]))*fsq_mat : i in [1..Nrows(vi) ]]);
+//TODO: Check singular values to see if rank is too small. If so then compute more tritangents.
+
+
 gammaiinv:=NumericalKernel(N: Epsilon:=RR!(10^(-15)));
+D, U, V:=SingularValueDecomposition(Xnew);
+Upart:=Matrix(U[1..7]);
+phi:=Upart*DiagonalMatrix(Eltseq(gammaiinv))*fsq_mat;
+Qpre:=Kernel(phi);
+Qpre1:=Qpre*Upart;
+Qnew:=&+[Eltseq(Basis(Qpre1)[1])[i]*mats1new[i]: i in [1..r] ];
+dualelt:=mats1newx*ChangeRing(Transpose(Upart), CC4);
+Time(T);
+
+
+
+D, U, V:=SingularValueDecomposition(phi);
+phiext:=HorizontalJoin(phi, Matrix(7,1, Eltseq(Conjugate(U)[7])));
+phiTinv:=ChangeRing(Transpose(phiext)^(-1), CC4);
+phiL:=dualelt*phiTinv;
+qdual:=ZeroMatrix(CC4, 3,3);
+count:=1;
+for i in [1..3] do
+	for j in [i..3] do
+		qdual[i,j]:=phiL[1,count];
+		qdual[j, i]:=phiL[1, count];
+		count+:=1;	
+	end for;
+end for;
+detqdual:=Determinant(qdual);
+
+
+//For testing the correctness:
+CC1<t>:=PolynomialRing(CC);
+Ccan, map:=CanonicalImage(S);
+Cplane:=Domain(map);
+for i in [-10..-1] cat [1..10] do
+	f1:=Evaluate(DefiningEquation(Cplane), [1/CC!i+CC.1, t]);
+	ys:=[roo[1]: roo in Roots(f1)];
+	coord:=[[Evaluate(DefiningEquations(map)[nu], [1/CC!i+CC.1, y]) : nu in [1..4]  ]: y in ys];
+	print [Abs(Evaluate(detqdual, coo )): coo in coord];
+end for;
+
+function RealPart(A)
+return Matrix(Nrows(A), Ncols(A), [[Real(A[i,j]) : j in [1..Ncols(A)]] : i in [1..Nrows(A)]]);
+end function;
+
+function NormalForm(A)
+	N:=Nrows(A);
+	if N eq 1 then
+		return Matrix(CC, [[1]]);
+	end if;
+	V:=VectorSpace(CC, N);
+	min, i:= Min([Abs(d): d in Eltseq(Diagonal(A))]);
+        if min lt 10^(-15) then
+	 	error "Error when computing normal form";
+		//TODO: Find a better way to find a non-isotropic vector.
+	end if;
+        v:=Matrix(CC, N,1,Eltseq(Basis(V)[i]));
+        K:=NumericalKernel(A*v);
+        SD:=NormalForm(K*A*Transpose(K) );
+       return VerticalJoin( Transpose(v), SD*K );
+end function;
+
+
+
+
+
+	
+       
+
+
+
+
+
+
+
+
+
+
+
+	return SD;
+
+end function;
+
+
+
 
