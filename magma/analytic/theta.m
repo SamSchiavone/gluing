@@ -279,6 +279,169 @@ intrinsic Theta(z::SeqEnum[FldComElt], tau::AlgMatElt : char := [], dz := [], dt
   return result, error_term;
 end intrinsic;
 
+
+
+intrinsic ThetaBatch(tau::AlgMatElt, char_list::SeqEnum, flag::RngIntElt: prec:=0) -> SeqEnum 
+{}
+  ZZ := Integers();
+  QQ := Rationals();
+  g := Nrows(tau);
+
+  if prec gt 0 then
+    prec := Min([prec, Precision(Parent(tau[1,1]))]);
+  else
+    prec := Precision(Parent(tau[1,1]));
+  end if;
+  SetDefaultRealFieldPrecision(prec);
+  CC<I> := ComplexField(prec);
+  RR := RealField(prec);
+  pi := Pi(RR);
+
+  // tau := X + I*Y
+  X := ChangeRing(Real(tau), RR);
+  Y := ChangeRing(Imaginary(tau), RR);
+  if not IsSymmetric(Y) then
+    Y := (1/2)*(Y + Transpose(Y));
+  end if;
+  // Find T upper-triangular with transpose(T)*T = Y
+  T := Transpose(Cholesky(Y));
+  vprintf Theta: "Cholesky decomposition T = %o\n", T;
+
+  eps := RR!(10^-prec);
+
+  // In Agostini and Chua's code rho = is taken to be the square of the norm of the shortest vector times sqrt(pi)) for some reason. This could affect the error bounds
+  vprint Theta: "Setting radius...";
+  rho := L2Norm(ShortestVector(Lattice(Transpose(T)))*Sqrt(pi));
+  vprintf Theta: "rho = %o\n", rho;
+
+  
+  N := 2;
+  R0 := (1/2)*(Sqrt(CC!(g + 2*N + Sqrt(CC!(g^2 + 8*N)))) + rho);
+
+  T_inv_norm := L2Norm(Inverse(T));
+
+  // We compute the radius of the ellipsoid over which we take the sum needed to bound the error in the sum by eps (See Theorem 3.1 in Agostini, Chua) 
+  function R_function(x, eps)
+    Rc := Parent(x);
+
+    return -eps + (2*pi)^N * (g/2) * (2/rho)^g * &+[Binomial(N, j) * (pi^(j/2))^-1 * T_inv_norm^j * Sqrt(g)^(N - j) * Gamma(Rc!(g + j)/2, (x - rho/2)^2 : Complementary := true) : j in [0..N]];
+  end function;
+
+  /*
+    We want to find the max(R0, x) where x is the solution to R_function(x, eps) = 0
+    Taking x bigger will only improve the error bound, but we want x to be as small as possible
+    to speed up later computations. We therefore look for an x for which R_function(x, eps) is small and negative.
+    As R_function is monotonic descending we first determine an R1 for which R_function(R1, eps) < 0
+    and then subdivide intervals until we find a solution that satisfies our requirements
+  */
+
+  vprint Theta: "Computing radius of ellipsoid";
+  R1 := R0;
+  err := RR!(10^(-prec));
+  vprintf Theta: "initializing R1 = %o\n", R1;
+
+  // Find an R1 such that R_function becomes negative
+  while R_function(R1, eps) gt 0 do
+    R1 := R1 + R0;
+    //R1 := 2*R1;
+    vprintf Theta: "R1 = %o\n", R1;
+    vprintf Theta: "R_function = %o\n", R_function(R1, eps);
+  end while;
+  vprintf Theta: "Making R_function negative, now R1 = %o\n", R1;
+
+  if R1 ne R0 then
+  //if not Abs(R1 - R0) lt eps then
+    while (0 lt R_function(R0, eps)) or (R_function(R0, eps) lt -err) do
+      Rmid := (R0 + R1)/2;
+      middle := R_function(Rmid, eps);
+      if middle lt -eps then
+        R1 := Rmid;
+      else
+        R0 := Rmid;
+      end if;
+
+    end while;
+  end if;
+  vprintf Theta: "After while loop, R0 = %o, R1 = %o\n", R0, R1;
+
+  radius_ellipsoid := R1;
+
+  error_epsilon := R_function(R1, RR!0);
+t0:=Time();
+  vprint Theta: "Computing lattice points in translates of ellipsoid";
+  L := LatticeWithBasis(Transpose(T));
+ellipsoid_points := [Matrix(QQ, 4, 1, Coordinates(L, L!Vector(el[1]))) : el in ShortVectors(L, R1^2/pi)];
+  ellipsoid_points cat:= [-v : v in ellipsoid_points];
+t1:=Time();
+print "Time for ellipsoid:";
+print Time(t0);
+  for i := 1 to g do
+    Lat1 := [];
+    pad := Matrix(QQ, 4,1, [0 : i in [1..g]]);
+    pad[i,1] := 1;
+    for pt in ellipsoid_points do
+      Append(~Lat1, pt + pad);
+      Append(~Lat1, pt - pad);
+    end for;
+    ellipsoid_points cat:=  Lat1;
+  end for;
+  ellipsoid_points := Setseq(Seqset(ellipsoid_points));
+print "Time for shifting ellipsoids:";
+print Time(t1);
+t2:=Time();
+  factor_matrix := UpperTriangularMatrix([CC!1/(2*pi*I) :i in [1..10]]);
+  for i in [1..4] do
+    factor_matrix[i,i] /:= 2;
+  end for;
+  
+  output := [factor_matrix: j in [1..#char_list]];
+  theta_nulls := []; 
+  // We compute the Theta function
+  vprint Theta: "Computing theta function";
+
+  vprint Theta: "\tComputing oscillatory part";
+
+  for cha in [1..#char_list] do
+    eta :=  - Matrix(QQ, 4,1, Eltseq(char_list[cha][1]/2));
+    cha_mat := Matrix(RR, 4,1,Eltseq(char_list[cha][2]/2));
+    if flag gt 1 then
+      for i in [1..4] do
+        for j in [i..4] do
+          dz := ZeroMatrix(ZZ, 2, 4);;
+          dz[1,i] := 1;
+          dz[2,j] := 1;
+          vprintf Theta: "\t\t= %o\n", i, j;
+          oscillatory_part := RR!0;
+          for ell_point in ellipsoid_points do
+              v := ell_point - eta;
+              vRR := ChangeRing(v, RR);
+              oscillatory_part +:= &*[CC | (d*vRR)[1] : d in Rows(dz)] * Exp(pi*I*((Transpose(vRR) * (X * vRR)) + 2*Transpose(vRR) * cha_mat )[1,1]) * Exp(-pi * (Transpose(vRR) * (Y * (vRR)))[1,1]);
+          end for;
+          oscillatory_part *:= (2*pi*I)^N;
+          output[cha][i,j] *:= oscillatory_part;
+          vprintf Theta: "\t\t= %o\n", output[cha][i,j];
+          vprint Theta: "\n";
+        end for;
+      end for;
+    end if;
+    if flag eq 1 or flag eq 3 then
+      oscillatory_part := RR!0;
+      for ell_point in ellipsoid_points do
+        v := ell_point - eta;
+        vRR := ChangeRing(v, RR);
+        oscillatory_part +:= Exp(pi*I*((Transpose(vRR) * (X * vRR)) + 2*Transpose(vRR) * cha_mat)[1,1]) * Exp(-pi * (Transpose(vRR) * (Y * (vRR)))[1,1]);
+      end for;
+     theta_nulls[cha] := oscillatory_part;
+     end if;
+  end for;
+print "Time for theta computation";
+print Time(t2);
+  error_term := error_epsilon;
+
+  return output, theta_nulls, error_term;
+end intrinsic;
+
+
 intrinsic SiegelReduction(tau::AlgMatElt) -> Any
   {}
 
@@ -346,7 +509,7 @@ intrinsic SiegelReduction(tau::AlgMatElt) -> Any
       return tau, Gamma;
     else
       Gamma := quasi_inversion*Gamma;
-      tau := (Aq*tau + Bq)*((Cq*tau + Bq)^-1);
+      tau := (Aq*tau + Bq)*((Cq*tau + Dq)^-1);
     end if;
   end while;
 end intrinsic;
