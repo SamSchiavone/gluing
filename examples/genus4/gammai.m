@@ -1,4 +1,4 @@
-AttachSpec("/home/apieper/gluing-g4/magma/spec");
+AttachSpec("/home/hanselma/gluing-g4/magma/spec");
 prec := 30;
 SetDefaultRealFieldPrecision(prec);
 QQ:=Rationals();
@@ -197,8 +197,8 @@ mats2:=[[(Matrix(4,1, tritangents[i][1])*Matrix(1,4, tritangents[i][2]) * si[j][
 mats2:=[[(m +Transpose(m))/2 : m in mats2[j]] : j in [1..sirows-1]];
 mats:=[mats1] cat mats2;
 X:=HorizontalJoin([Matrix(  [&cat[[m[i,j]: j in [i..4]]: i in [1..4]] : m in mats[j]]  ): j in [1..sirows]]);
-gammai:=NumericalSolution(X, W: Epsilon:=RR!10^(-15));
-gammai:=Eltseq(gammai1/gammai1[1,1]);
+//gammai:=NumericalSolution(X, W: Epsilon:=RR!10^(-15));
+//gammai:=Eltseq(gammai1/gammai1[1,1]);
 
 
 //
@@ -279,27 +279,83 @@ function NormalForm(A)
        return VerticalJoin( Transpose(v), SD*K );
 end function;
 
+S:= NormalForm(Qnew);
+
+//COmpute the matrix S2 whose inverse will transform the normal form into one where all coefficients are 1.
+
+S2 := S * Qnew * Transpose(S);
+for i in [1..4] do
+  S2[i,i] := Sqrt(S2[i,i]);
+end for;
+
+I:=CC.1;
+//Coordinate Transformation that maps x^2 + y^2 +z^2 +w^2 to xy - zw.
+IdToSegre := Matrix(CC, 4, 4, [[0,1/2,0,1/2*I],[0,1/2,0,-1/2*I],[1/2,0,-1/2*I,0], [-1/2, 0,-1/2*I,0]]);
+
+//Complete Transformation
+QtoSegre := IdToSegre * (S2)^(-1) * S; 
+
+
+v:=Matrix(CC4, [[CC4.1, CC4.2, CC4.3, CC4.4]]);
+
+//Apply coordinate transformation to detqdual
+detqdualonsegre := Evaluate(detqdual, Eltseq((v * ChangeRing(QtoSegre, CC4))[1]));
+
+//Homogeneous
+P1P1<x1,x2,y1,y2> := PolynomialRing(CC,4);
+x:=[x1,x2];
+y:=[y1,y2];
+f := Evaluate(detqdualonsegre, [x1*y1, x2*y1, x1*y2, x2*y2]);
+
+
+xy:= AssociativeArray();
+
+for i in [0..3] do
+  for j in [0..3] do
+    for k in [0..3] do
+      for l in [0..3] do
+        xy[[i,j,k,l]]:= CC!0;
+end for;
+end for;
+end for;
+end for;
 
 
 
+xy[[3,0,3,0]] := Sqrt(MonomialCoefficient(f, x1^6*y1^6));
+xy[[3,0,0,3]] := -Sqrt(MonomialCoefficient(f, x1^6*y2^6));
+xy[[0,3,3,0]]:= -Sqrt(MonomialCoefficient(f, x2^6*y1^6));
+xy[[0,3,0,3]] := Sqrt(MonomialCoefficient(f, x2^6*y2^6));
 
-	
-       
+//TODO: Correct sign of square root non manually
+
+xy[[3,0,1,2]] := (MonomialCoefficient(f, x1^6*y1*y2^5)/xy[[3,0,0,3]])/2;
+xy[[3,0,2,1]] := (MonomialCoefficient(f, x1^6*y1^5*y2)/xy[[3,0,3,0]])/2;
+
+xy[[0,3,1,2]] := (MonomialCoefficient(f, x2^6*y1*y2^5)/xy[[0,3,0,3]])/2;
+xy[[0,3,2,1]] := (MonomialCoefficient(f, x2^6*y1^5*y2)/xy[[0,3,3,0]])/2;
+
+xy[[1,2,3,0]] := (MonomialCoefficient(f, x1*x2^5*y1^6)/xy[[0,3,3,0]])/2;
+xy[[2,1,3,0]] := (MonomialCoefficient(f, x1^5*x2*y1^6)/xy[[3,0,3,0]])/2;
+
+xy[[1,2,0,3]] := (MonomialCoefficient(f, x1*x2^5*y2^6)/xy[[0,3,0,3]])/2;
+xy[[2,1,0,3]] := (MonomialCoefficient(f, x1^5*x2*y2^6)/xy[[3,0,0,3]])/2;
+
+sqrt:= P1P1!0;
+
+for i in [0..3] do
+  for j in [0..3] do
+    for k in [0..3] do
+      for l in [0..3] do
+        sqrt +:= xy[[i,j,k,l]] *x1^i*x2^j*y1^k*y2^l;
+end for;
+end for;
+end for;
+end for;
+
+sqrt^2 - f;
 
 
-
-
-
-
-
-
-
-
-
-	return SD;
-
-end function;
-
-
+//Determine coefficients of monomials with degree of either x_i or y_i equal to 3
 
 
