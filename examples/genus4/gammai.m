@@ -305,7 +305,7 @@ detqdualonsegre := Evaluate(detqdual, Eltseq((v * ChangeRing(QtoSegre, CC4))[1])
 P1P1<x1,x2,y1,y2> := PolynomialRing(CC,4);
 x:=[x1,x2];
 y:=[y1,y2];
-f := Evaluate(detqdualonsegre, [x1*y1, x2*y1, x1*y2, x2*y2]);
+f := Evaluate(detqdualonsegre, [x1*y1, x2*y2, x1*y2, x2*y1]);
 
 
 xy:= AssociativeArray();
@@ -325,7 +325,7 @@ end for;
 xy[[3,0,3,0]] := Sqrt(MonomialCoefficient(f, x1^6*y1^6));
 xy[[3,0,0,3]] := -Sqrt(MonomialCoefficient(f, x1^6*y2^6));
 xy[[0,3,3,0]]:= -Sqrt(MonomialCoefficient(f, x2^6*y1^6));
-xy[[0,3,0,3]] := Sqrt(MonomialCoefficient(f, x2^6*y2^6));
+xy[[0,3,0,3]] := -Sqrt(MonomialCoefficient(f, x2^6*y2^6));
 
 //TODO: Correct sign of square root non manually
 
@@ -340,6 +340,12 @@ xy[[2,1,3,0]] := (MonomialCoefficient(f, x1^5*x2*y1^6)/xy[[3,0,3,0]])/2;
 
 xy[[1,2,0,3]] := (MonomialCoefficient(f, x1*x2^5*y2^6)/xy[[0,3,0,3]])/2;
 xy[[2,1,0,3]] := (MonomialCoefficient(f, x1^5*x2*y2^6)/xy[[3,0,0,3]])/2;
+
+xy[[2,1,1,2]] := ((MonomialCoefficient(f, x1^5*x2*y1*y2^5) - 2*xy[[3,0,1,2]]*xy[[2,1,0,3]] )/xy[[3,0,0,3]])/2;
+xy[[2,1,2,1]] := ((MonomialCoefficient(f, x1^5*x2*y1^5*y2) - 2*xy[[3,0,2,1]]*xy[[2,1,3,0]] )/xy[[3,0,3,0]])/2;
+
+xy[[1,2,1,2]] := ((MonomialCoefficient(f, x1*x2^5*y1*y2^5) - 2*xy[[0,3,1,2]]*xy[[1,2,0,3]] )/xy[[0,3,0,3]])/2;
+xy[[1,2,2,1]] := ((MonomialCoefficient(f, x1*x2^5*y1^5*y2) - 2*xy[[0,3,2,1]]*xy[[1,2,3,0]] )/xy[[0,3,3,0]])/2;
 
 sqrt:= P1P1!0;
 
