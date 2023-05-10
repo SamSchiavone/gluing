@@ -57,7 +57,7 @@ for s in steiner do
   Append(~tritangents, new);
 end for;
 
-
+Time(T);
 
 chars_even := EvenThetaCharacteristics(3);
 /*eps := chars_even[1];
@@ -309,16 +309,35 @@ f := Evaluate(detqdualonsegre, [x1*y1, x2*y2, x1*y2, x2*y1]);
 
 
 xy:= AssociativeArray();
+P3mons:= AssociativeArray();
 
 for i in [0..3] do
   for j in [0..3] do
     for k in [0..3] do
       for l in [0..3] do
+        P3mons[[i,j,k,l]]:= CC4!0;
         xy[[i,j,k,l]]:= CC!0;
 end for;
 end for;
 end for;
 end for;
+
+P3mons[[3,0,3,0]] := CC4.1^3;
+P3mons[[3,0,0,3]] := CC4.3^3;
+P3mons[[0,3,3,0]]:= CC4.4^3;
+P3mons[[0,3,0,3]] := CC4.2^3;
+P3mons[[3,0,1,2]] := CC4.3^2*CC4.1;
+P3mons[[3,0,2,1]] := CC4.1^2*CC4.3;
+P3mons[[0,3,1,2]] := CC4.2^2*CC4.4;
+P3mons[[0,3,2,1]] := CC4.4^2*CC4.2;
+P3mons[[1,2,3,0]] := CC4.4^2*CC4.1;
+P3mons[[2,1,3,0]] := CC4.1^2*CC4.4;
+P3mons[[1,2,0,3]] := CC4.2^2*CC4.3;
+P3mons[[2,1,0,3]] := CC4.3^2*CC4.2;
+P3mons[[2,1,1,2]] :=CC4.3^2 * CC4.4;
+P3mons[[2,1,2,1]] := CC4.1^2 * CC4.2;
+P3mons[[1,2,1,2]] := CC4.2^2 * CC4.1;
+P3mons[[1,2,2,1]] := CC4.4^2 * CC4.3;
 
 
 
@@ -348,20 +367,32 @@ xy[[1,2,1,2]] := ((MonomialCoefficient(f, x1*x2^5*y1*y2^5) - 2*xy[[0,3,1,2]]*xy[
 xy[[1,2,2,1]] := ((MonomialCoefficient(f, x1*x2^5*y1^5*y2) - 2*xy[[0,3,2,1]]*xy[[1,2,3,0]] )/xy[[0,3,3,0]])/2;
 
 sqrt:= P1P1!0;
+SegreCubic := CC4!0;
 
 for i in [0..3] do
   for j in [0..3] do
     for k in [0..3] do
       for l in [0..3] do
         sqrt +:= xy[[i,j,k,l]] *x1^i*x2^j*y1^k*y2^l;
+        SegreCubic +:= xy[[i,j,k,l]] * P3mons[[i,j,k,l]];
 end for;
 end for;
 end for;
 end for;
 
-sqrt^2 - f;
 
+v:=Matrix(CC4, [[CC4.1, CC4.2, CC4.3, CC4.4]]);
 
-//Determine coefficients of monomials with degree of either x_i or y_i equal to 3
+//Apply coordinate transformation to detqdual
+cubic := Evaluate(SegreCubic, Eltseq((v * ChangeRing(QtoSegre^(-1), CC4))[1]));
+
+//For testing the correctness:
+for i in [-10..-1] cat [1..10] do
+	f1:=Evaluate(DefiningEquation(Cplane), [1/CC!i+CC.1, t]);
+	ys:=[roo[1]: roo in Roots(f1)];
+	coord:=[[Evaluate(DefiningEquations(map)[nu], [1/CC!i+CC.1, y]) : nu in [1..4]  ]: y in ys];
+	print [Abs(Evaluate(cubic, coo )): coo in coord];
+end for;
+
 
 
