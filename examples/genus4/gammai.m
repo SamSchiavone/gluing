@@ -42,7 +42,85 @@ for aro in aronhold[1..r] do
 
 end for;
 
+//Copied from Agostini for quick test
 
+function parity_char(chars)
+  zer:=ZeroMatrix(GF(2), 4,4);
+  id:=IdentityMatrix(GF(2),4);
+  J1:=BlockMatrix(2,2, [zer,id, zer,zer]);
+  return chars*J1*Transpose(chars)[1,1];
+end function;
+
+
+function check_azygetic(chars)
+  nchar := #chars;
+    for i in [1..nchar] do
+    for j in [i+1..nchar] do
+    for k in [j+1..nchar] do 
+      if parity_char(Matrix(GF(2), 1, 8, chars[i]) + Matrix(GF(2), 1, 8,chars[j]) + Matrix(GF(2), 1, 8,chars[k])) eq 0 then
+         return false;
+      end if;
+    end for;
+    end for;
+    end for;
+    return true;
+end function;
+
+function DotProductSeq(v1,v2)
+  assert #v1 eq #v2;
+  return &+[v1[i]*v2[i] : i in [1..#v1]];
+end function;
+
+
+tritangentsys := 
+   [[[GF(2)| 0, 1, 1, 0, 0, 1, 0, 0 ], [ GF(2)|0, 1, 1, 0, 1, 1, 0, 0 ]],
+    [[GF(2)| 0, 1, 0, 0, 0, 1, 0, 0 ], [GF(2)| 0, 1, 0, 0, 1, 1, 0, 0 ]],
+    [[GF(2)| 0, 1, 0, 1, 0, 1, 0, 0 ], [GF(2)| 0, 1, 0, 1, 1, 1, 0, 0 ]],
+    [[GF(2)| 0, 1, 1, 1, 0, 1, 0, 0 ], [GF(2)| 0, 1, 1, 1, 1, 1, 0, 0 ]],
+    [[GF(2)| 0, 1, 0, 1, 0, 1, 1, 0 ], [GF(2)| 0, 1, 0, 1, 1, 1, 1, 0 ]],
+    [[GF(2)| 0, 1, 0, 0, 0, 1, 1, 0 ], [GF(2)| 0, 1, 0, 0, 1, 1, 1, 0 ]],
+    [[GF(2)| 0, 1, 0, 0, 0, 1, 1, 1 ], [GF(2)| 0, 1, 0, 0, 1, 1, 1, 1 ]],
+    [[GF(2)| 0, 1, 1, 1, 0, 1, 1, 1 ], [GF(2)| 0, 1, 1, 1, 1, 1, 1, 1 ]],
+    [[GF(2)| 0, 1, 0, 0, 0, 1, 0, 1 ], [GF(2)| 0, 1, 0, 0, 1, 1, 0, 1 ]],
+    [[GF(2)| 0, 1, 1, 0, 0, 1, 0, 1 ], [GF(2)| 0, 1, 1, 0, 1, 1, 0, 1 ]]];
+
+tritangentbasis := [
+    [GF(2)|1, 1, 1, 0, 1, 1, 1, 0],
+    [GF(2)|1, 0, 1, 0, 0, 0, 1, 0],
+    [GF(2)|1, 1, 1, 0, 0, 0, 1, 0],
+    [GF(2)|1, 0, 1, 0, 0, 1, 1, 0],
+    [GF(2)|1, 0, 0, 0, 1, 0, 1, 0]
+];
+
+
+V:=VectorSpace(GF(2), 8);
+Laz:=[];
+for v in V do                                                
+  if (check_azygetic(tritangentbasis cat [Eltseq(v)]) and (DotProductSeq(Eltseq(v)[1..4], Eltseq(v)[5..8]) eq 1)) then
+    Append(~Laz, v);                                                     
+  end if;
+end for;
+
+
+function ThetasNeeded()
+
+  char_list := [];
+  for i in [1..4] do
+    
+  end for;
+end function;
+
+function TritangentPlane2(tau, tritangentbasis, char)
+  CC := BaseRing(Pi);
+  cs := [];
+  for i := 1 to 4 do
+    dz := [0,0,0,0];
+    dz[i] := 1;
+    Append(~cs, Theta([CC | 0,0,0,0], tau : char := char, dz := [dz], prec := prec));
+  end for;
+  cs := Eltseq(Matrix(1,4,cs)*(Pi1^-1));
+  return cs;
+end function;
 
 tritangents := [];
 //for char in chars[1..4] do
@@ -224,6 +302,8 @@ gammaiinv:=NumericalKernel(N: Epsilon:=RR!(10^(-15)));
 D, U, V:=SingularValueDecomposition(Xnew);
 Upart:=Matrix(U[1..7]);
 phi:=Upart*DiagonalMatrix(Eltseq(gammaiinv))*fsq_mat;
+
+//Kernel is not deterministic
 Qpre:=Kernel(phi);
 Qpre1:=Qpre*Upart;
 Qnew:=&+[Eltseq(Basis(Qpre1)[1])[i]*mats1new[i]: i in [1..r] ];
@@ -375,33 +455,6 @@ for i in [0..3] do
     
   end for;
 end for;
-
-/*From other corners
-newstart := [start[1], start[2] + 3*vstep];
-for i in [1..3] do
-  //Horizontal steps 
-  n1 := newstart[1] + hstep * i; n2 := 3 - n1;
-  n3 := newstart[2] ; n4 := 3 - n3;
-  xy[[n1,n3]] := (MonomialCoefficient(f, x1^(newstart[1] +n1)*x2^(3 - newstart[1] + n2) * y1^(newstart[2] + n3)*y2^(3- newstart[2] + n4))/xy[newstart])/2;
-end for;
-
-newstart := [start[1] + 3*hstep, start[2] ];
-
-for i in [1..2] do
-  //Vertical steps
-  n1 := newstart[1]; n2 := 3 - n1;
-  n3 := newstart[2] + vstep * i; n4 := 3 - n3;
-  xy[[n1,n3]] := (MonomialCoefficient(f, x1^(newstart[1] +n1)*x2^(3 - newstart[1] + n2) * y1^(newstart[2] + n3)*y2^(3- newstart[2] + n4))/xy[newstart])/2;
-end for;
-
-//Center parts
-
-xy[[2,1]] := ((MonomialCoefficient(f, x1^5*x2*y1*y2^5) - 2*xy[[3,1]]*xy[[2,0]] )/xy[[3,0]])/2;
-xy[[2,2]] := ((MonomialCoefficient(f, x1^5*x2*y1^5*y2) - 2*xy[[3,2]]*xy[[2,3]] )/xy[[3,3]])/2;
-
-xy[[1,1]] := ((MonomialCoefficient(f, x1*x2^5*y1*y2^5) - 2*xy[[0,1]]*xy[[1,0]] )/xy[[0,0]])/2;
-xy[[1,2]] := ((MonomialCoefficient(f, x1*x2^5*y1^5*y2) - 2*xy[[0,2]]*xy[[1,3]] )/xy[[0,3]])/2;
-*/
 
 sqrt:= P1P1!0;
 SegreCubic := CC4!0;
