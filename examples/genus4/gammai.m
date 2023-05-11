@@ -58,7 +58,7 @@ for s in steiner do
 end for;
 
 Time(T);
-
+T:=Time();
 chars_even := EvenThetaCharacteristics(3);
 /*eps := chars_even[1];
 eta_sqs := AssociativeArray(); // now just etas
@@ -88,7 +88,8 @@ for i := 1 to 64 do
 end for;
 thetas:=correct_signs(thetas);
 
-
+Time(T);
+T:=Time();
 
 function ModuliFromTheta(thetas);
   I:=Parent(thetas[1]).1;
@@ -259,24 +260,23 @@ for i in [-10..-1] cat [1..10] do
 end for;
 
 function RealPart(A)
-return Matrix(Nrows(A), Ncols(A), [[Real(A[i,j]) : j in [1..Ncols(A)]] : i in [1..Nrows(A)]]);
+        return Matrix(Nrows(A), Ncols(A), [[Real(A[i,j]) : j in [1..Ncols(A)]] : i in [1..Nrows(A)]]);
 end function;
 
 function NormalForm(A)
-	N:=Nrows(A);
-	if N eq 1 then
-		return Matrix(CC, [[1]]);
+	N := Nrows(A);
+	CCN := VectorSpace(CC, N);
+	ReA := RealPart(A);
+	ImA := RealPart(-CC.1*A);
+        X := BlockMatrix([[ReA, -ImA],[-ImA, -ReA]]);
+	D, T := NumericalSchurForm(X);
+ 	pos := [i: i in [1..2*N] | D[i,i] gt 0];
+	if #pos ne N then
+		error("Error when computing normal form");
 	end if;
-	V:=VectorSpace(CC, N);
-	min, i:= Min([Abs(d): d in Eltseq(Diagonal(A))]);
-        if min lt 10^(-15) then
-	 	error "Error when computing normal form";
-		//TODO: Find a better way to find a non-isotropic vector.
-	end if;
-        v:=Matrix(CC, N,1,Eltseq(Basis(V)[i]));
-        K:=NumericalKernel(A*v);
-        SD:=NormalForm(K*A*Transpose(K) );
-       return VerticalJoin( Transpose(v), SD*K );
+        vecs := [[CCN!Eltseq(T[i])[1..N], CCN!Eltseq(T[i])[N+1..2*N]]  : i in pos];
+	ret := Matrix([vecs[i][1]+CC.1*vecs[i][2]: i in [1..N ]]  );
+	return ret;
 end function;
 
 S:= NormalForm(Qnew);
@@ -311,74 +311,108 @@ f := Evaluate(detqdualonsegre, [x1*y1, x2*y2, x1*y2, x2*y1]);
 xy:= AssociativeArray();
 P3mons:= AssociativeArray();
 
+P3mons[[3,3]] := CC4.1^3;
+P3mons[[3,0]] := CC4.3^3;
+P3mons[[0,3]]:= CC4.4^3;
+P3mons[[0,0]] := CC4.2^3;
+P3mons[[3,1]] := CC4.3^2*CC4.1;
+P3mons[[3,2]] := CC4.1^2*CC4.3;
+P3mons[[0,1]] := CC4.2^2*CC4.4;
+P3mons[[0,2]] := CC4.4^2*CC4.2;
+P3mons[[1,3]] := CC4.4^2*CC4.1;
+P3mons[[2,3]] := CC4.1^2*CC4.4;
+P3mons[[1,0]] := CC4.2^2*CC4.3;
+P3mons[[2,0]] := CC4.3^2*CC4.2;
+P3mons[[2,1]] :=CC4.3^2 * CC4.4;
+P3mons[[2,2]] := CC4.1^2 * CC4.2;
+P3mons[[1,1]] := CC4.2^2 * CC4.1;
+P3mons[[1,2]] := CC4.4^2 * CC4.3;
+
+
+
+xy[[3,3]] := Sqrt(MonomialCoefficient(f, x1^6*y1^6));
+xy[[3,0]] := Sqrt(MonomialCoefficient(f, x1^6*y2^6));
+xy[[0,3]] := Sqrt(MonomialCoefficient(f, x2^6*y1^6));
+xy[[0,0]] := Sqrt(MonomialCoefficient(f, x2^6*y2^6));
+
+max:= 0;
+start := [];
+for i in Keys(xy) do
+  absval := Abs(xy[i]);
+  if absval gt max then
+    max := absval;
+    start := i;
+  end if;
+end for;
+
+hstep := 1;
+vstep := 1;
+
+if start[1] gt 0 then
+  hstep := -1;
+end if;
+
+if start[2] gt 0 then
+  vstep := -1;
+end if;
+
 for i in [0..3] do
   for j in [0..3] do
-    for k in [0..3] do
-      for l in [0..3] do
-        P3mons[[i,j,k,l]]:= CC4!0;
-        xy[[i,j,k,l]]:= CC!0;
+    if i eq 0 and j eq 0 then
+      continue;
+    end if;
+    n1 := start[1] + hstep * i; n2 := 3 - n1;
+    n3 := start[2] + vstep * j; n4 := 3 - n3;
+    mon := MonomialCoefficient(f, x1^(start[1] +n1)*x2^(3 - start[1] + n2) * y1^(start[2] + n3)*y2^(3 - start[2] + n4));
+    
+    rect := &cat[[[[start[1] + hstep * mu,start[2] + vstep * nu], [start[1] + hstep * (i - mu),start[2] + vstep * (j - nu)]]  : mu in [0..i] | (mu ne 0 or nu ne 0) and (mu ne i or nu ne j)] : nu in [0..j]];
+    print "i =", i, "j=", j, "coords ", n1, n3, "\n";
+    print rect;
+    print x1^(start[1] +n1)*x2^(3 - start[1] + n2) * y1^(start[2] + n3)*y2^(3 - start[2] + n4), "\n";
+    
+    subtractsum := &+([xy[tup[1]] * xy[tup[2]] : tup in rect] cat [CC!0]);
+    xy[[n1,n3]] := ((mon - subtractsum  )/xy[start])/2;
+    
+  end for;
 end for;
+
+/*From other corners
+newstart := [start[1], start[2] + 3*vstep];
+for i in [1..3] do
+  //Horizontal steps 
+  n1 := newstart[1] + hstep * i; n2 := 3 - n1;
+  n3 := newstart[2] ; n4 := 3 - n3;
+  xy[[n1,n3]] := (MonomialCoefficient(f, x1^(newstart[1] +n1)*x2^(3 - newstart[1] + n2) * y1^(newstart[2] + n3)*y2^(3- newstart[2] + n4))/xy[newstart])/2;
 end for;
+
+newstart := [start[1] + 3*hstep, start[2] ];
+
+for i in [1..2] do
+  //Vertical steps
+  n1 := newstart[1]; n2 := 3 - n1;
+  n3 := newstart[2] + vstep * i; n4 := 3 - n3;
+  xy[[n1,n3]] := (MonomialCoefficient(f, x1^(newstart[1] +n1)*x2^(3 - newstart[1] + n2) * y1^(newstart[2] + n3)*y2^(3- newstart[2] + n4))/xy[newstart])/2;
 end for;
-end for;
 
-P3mons[[3,0,3,0]] := CC4.1^3;
-P3mons[[3,0,0,3]] := CC4.3^3;
-P3mons[[0,3,3,0]]:= CC4.4^3;
-P3mons[[0,3,0,3]] := CC4.2^3;
-P3mons[[3,0,1,2]] := CC4.3^2*CC4.1;
-P3mons[[3,0,2,1]] := CC4.1^2*CC4.3;
-P3mons[[0,3,1,2]] := CC4.2^2*CC4.4;
-P3mons[[0,3,2,1]] := CC4.4^2*CC4.2;
-P3mons[[1,2,3,0]] := CC4.4^2*CC4.1;
-P3mons[[2,1,3,0]] := CC4.1^2*CC4.4;
-P3mons[[1,2,0,3]] := CC4.2^2*CC4.3;
-P3mons[[2,1,0,3]] := CC4.3^2*CC4.2;
-P3mons[[2,1,1,2]] :=CC4.3^2 * CC4.4;
-P3mons[[2,1,2,1]] := CC4.1^2 * CC4.2;
-P3mons[[1,2,1,2]] := CC4.2^2 * CC4.1;
-P3mons[[1,2,2,1]] := CC4.4^2 * CC4.3;
+//Center parts
 
+xy[[2,1]] := ((MonomialCoefficient(f, x1^5*x2*y1*y2^5) - 2*xy[[3,1]]*xy[[2,0]] )/xy[[3,0]])/2;
+xy[[2,2]] := ((MonomialCoefficient(f, x1^5*x2*y1^5*y2) - 2*xy[[3,2]]*xy[[2,3]] )/xy[[3,3]])/2;
 
-
-xy[[3,0,3,0]] := Sqrt(MonomialCoefficient(f, x1^6*y1^6));
-xy[[3,0,0,3]] := -Sqrt(MonomialCoefficient(f, x1^6*y2^6));
-xy[[0,3,3,0]]:= -Sqrt(MonomialCoefficient(f, x2^6*y1^6));
-xy[[0,3,0,3]] := -Sqrt(MonomialCoefficient(f, x2^6*y2^6));
-
-//TODO: Correct sign of square root non manually
-
-xy[[3,0,1,2]] := (MonomialCoefficient(f, x1^6*y1*y2^5)/xy[[3,0,0,3]])/2;
-xy[[3,0,2,1]] := (MonomialCoefficient(f, x1^6*y1^5*y2)/xy[[3,0,3,0]])/2;
-
-xy[[0,3,1,2]] := (MonomialCoefficient(f, x2^6*y1*y2^5)/xy[[0,3,0,3]])/2;
-xy[[0,3,2,1]] := (MonomialCoefficient(f, x2^6*y1^5*y2)/xy[[0,3,3,0]])/2;
-
-xy[[1,2,3,0]] := (MonomialCoefficient(f, x1*x2^5*y1^6)/xy[[0,3,3,0]])/2;
-xy[[2,1,3,0]] := (MonomialCoefficient(f, x1^5*x2*y1^6)/xy[[3,0,3,0]])/2;
-
-xy[[1,2,0,3]] := (MonomialCoefficient(f, x1*x2^5*y2^6)/xy[[0,3,0,3]])/2;
-xy[[2,1,0,3]] := (MonomialCoefficient(f, x1^5*x2*y2^6)/xy[[3,0,0,3]])/2;
-
-xy[[2,1,1,2]] := ((MonomialCoefficient(f, x1^5*x2*y1*y2^5) - 2*xy[[3,0,1,2]]*xy[[2,1,0,3]] )/xy[[3,0,0,3]])/2;
-xy[[2,1,2,1]] := ((MonomialCoefficient(f, x1^5*x2*y1^5*y2) - 2*xy[[3,0,2,1]]*xy[[2,1,3,0]] )/xy[[3,0,3,0]])/2;
-
-xy[[1,2,1,2]] := ((MonomialCoefficient(f, x1*x2^5*y1*y2^5) - 2*xy[[0,3,1,2]]*xy[[1,2,0,3]] )/xy[[0,3,0,3]])/2;
-xy[[1,2,2,1]] := ((MonomialCoefficient(f, x1*x2^5*y1^5*y2) - 2*xy[[0,3,2,1]]*xy[[1,2,3,0]] )/xy[[0,3,3,0]])/2;
+xy[[1,1]] := ((MonomialCoefficient(f, x1*x2^5*y1*y2^5) - 2*xy[[0,1]]*xy[[1,0]] )/xy[[0,0]])/2;
+xy[[1,2]] := ((MonomialCoefficient(f, x1*x2^5*y1^5*y2) - 2*xy[[0,2]]*xy[[1,3]] )/xy[[0,3]])/2;
+*/
 
 sqrt:= P1P1!0;
 SegreCubic := CC4!0;
 
 for i in [0..3] do
   for j in [0..3] do
-    for k in [0..3] do
-      for l in [0..3] do
-        sqrt +:= xy[[i,j,k,l]] *x1^i*x2^j*y1^k*y2^l;
-        SegreCubic +:= xy[[i,j,k,l]] * P3mons[[i,j,k,l]];
+        sqrt +:= xy[[i,j]] *x1^i*x2^(3-i)*y1^j*y2^(3-j);
+        SegreCubic +:= xy[[i,j]] * P3mons[[i,j]];
 end for;
 end for;
-end for;
-end for;
+
 
 
 v:=Matrix(CC4, [[CC4.1, CC4.2, CC4.3, CC4.4]]);
