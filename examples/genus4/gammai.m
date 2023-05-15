@@ -48,19 +48,21 @@ function parity_char(chars)
   zer:=ZeroMatrix(GF(2), 4,4);
   id:=IdentityMatrix(GF(2),4);
   J1:=BlockMatrix(2,2, [zer,id, zer,zer]);
-  return chars*J1*Transpose(chars)[1,1];
+  return (chars*J1*Transpose(chars))[1,1];
 end function;
 
 
 function check_azygetic(chars)
   nchar := #chars;
-    for i in [1..nchar] do
+    i:=1;
     for j in [i+1..nchar] do
     for k in [j+1..nchar] do 
-      if parity_char(Matrix(GF(2), 1, 8, chars[i]) + Matrix(GF(2), 1, 8,chars[j]) + Matrix(GF(2), 1, 8,chars[k])) eq 0 then
+      chari:=Matrix(GF(2), 1, 8, chars[i]);
+      charj:=Matrix(GF(2), 1, 8, chars[j]);
+      chark:=Matrix(GF(2), 1, 8, chars[k]);
+      if parity_char(chari)+parity_char(charj)+parity_char(chark)+parity_char(chari+charj+chark) eq 0 then
          return false;
       end if;
-    end for;
     end for;
     end for;
     return true;
@@ -89,7 +91,7 @@ tritangentbasis := [
     [GF(2)|1, 0, 1, 0, 0, 0, 1, 0],
     [GF(2)|1, 1, 1, 0, 0, 0, 1, 0],
     [GF(2)|1, 0, 1, 0, 0, 1, 1, 0],
-    [GF(2)|1, 0, 0, 0, 1, 0, 1, 0]
+    [GF(2)|0, 1, 1, 0, 0, 1, 0, 0]
 ];
 
 
