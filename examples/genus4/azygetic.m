@@ -61,8 +61,80 @@ function is_azygetic(chars)
 	return true;
 end function;
 
+function find_rotation_matrix(v1,v2,w1)
+  var_names := ["a21","a22","a23","a31","a32","a33"];
+  R<a21,a22,a23,a31,a32,a33> := PolynomialRing(GF(2),#var_names);
+  A := Matrix(3,3,[1,0,0,a21,a22,a23,a31,a32,a33]);
+  v1 := Transpose(ChangeRing(v1,R));
+  v2 := Transpose(ChangeRing(v2,R));
+  w1 := Transpose(ChangeRing(w1,R));
+  eqn := Transpose(v2)*Transpose(A)*(v1+w1) + Transpose(v1)*v2;
+  eqn := Eltseq(eqn)[1];
+  lhs := Matrix(6,1,[MonomialCoefficient(eqn,R.i) : i in [1..6]]);
+  rhs := Matrix(1,1,[MonomialCoefficient(eqn,R!1)]);
+  S, K := Solution(lhs,rhs);
+  for k in K do
+    Asol := Matrix(3,3, [1,0,0] cat Eltseq(S+Parent(S)!k));
+    if Determinant(Asol) eq 1 then
+      return Transpose(Asol);
+    end if;
+  end for;
+end function;
+
+function correct_pairing(vec1, trans, variant)
+  if variant eq 1 then
+    if &+[Eltseq(vec1)[i+4]*Eltseq(trans)[i]: i in [1..4]] eq 1 then
+      v1:=Matrix(1,3, Eltseq(vec1)[2..4]);
+      v2:=Matrix(1,3, Eltseq(vec1)[6..8]);
+      w1:=Matrix(1,3, Eltseq(trans)[2..4]);
+      // v2+w2 ne 0 should be automatic
+      // want an invertible matrix A such that v2^T*A^T*(v1+w1) + v1^T*v2 = 0
+      // first row is (1 0 0)
+      Arot := find_rotation_matrix(v1,v2,w1);
+      Arot := (Arot)^-1;
+      printf "Arot = %o\n", Arot;
+      id2:=IdentityMatrix(GF(2),1);
+      Srot:=DiagonalJoin(<id2, Arot, id2, Transpose(Arot)^(-1)>);
+    end if;
+  // FIXME: transpose mayhem
+  elif variant eq 2 then
+    if &+[Eltseq(vec1)[i]*Eltseq(trans)[i+4]: i in [1..4]] eq 1 then
+        v1:=Matrix(1,2, Eltseq(vec1)[3..4]);
+        v2:=Matrix(1,2, Eltseq(vec1)[7..8]);
+        w2:=Matrix(1,2, Eltseq(trans)[7..8]);
+        if v2+w2 ne 0 then
+          min1:=Min([i: i in [1..2]| Eltseq(v1)[i] ne 0]);
+          min2:=Min([i: i in [1..2]| Eltseq(v2+w2)[i] ne 0]);
+          Vd2:=VectorSpace(GF(2),2);
+          Mat1:=Matrix(2,2, [Vd2!v1, Vd2.min1]);
+          Mat2:=Matrix(2,2, [Vd2!(v2+w2), Vd2.min1]);
+          if (v1*Transpose(v2))[1,1] eq 0 then
+              Arot:=Mat2^(-1)*Matrix(GF(2), [[0,1],[1,0]])*Transpose(Mat1^(-1));
+          else 
+              Arot:=Mat2^(-1)*Transpose(Mat1^(-1));
+          end if;
+          id2:=IdentityMatrix(GF(2),2);
+          Srot:=DiagonalJoin([id2, Arot, id2, Transpose(Arot)^(-1)]);
+      else 
+          v1:=Matrix(1,3, Eltseq(vec1)[2..4]  );
+          v2:=Matrix(1,3, Eltseq(vec1)[6..8]  );
+          Rhs:=Vector([(v1*Transpose(v2))[1,1]+v1[1,1]]);
+          col:=Solution( Matrix(2,1, Eltseq(vec1)[3..4]), Rhs);
+          Srot:=IdentityMatrix(GF(2),8);
+          Srot[3,2]:=col[1];
+          Srot[4,2]:=col[2];
+          Srot[6,7]:=col[1];
+          Srot[6,8]:=col[2];
+      end if;
+    else 
+        Srot:=IdentityMatrix(GF(2),8);
+    end if;
+  end if;
+  return Srot;
+end function;
+
 function map_azygetic(azy1, azy2)
-	Rhs:=Vector([GF(2)|0, 0,1]);
+  Rhs:=Vector([GF(2)|0,0,1]);
 	M1:=Matrix([azy1[1]+azy1[2], azy1[1]+azy1[3], azy1[1]+azy1[2]+azy1[3]+azy1[4]]);
 	M1:=VerticalJoin(M1, Solution(J*Transpose(M1), Rhs));
 	K1:=Matrix(Basis(Kernel(J*Transpose(M1))));
@@ -70,7 +142,7 @@ function map_azygetic(azy1, azy2)
 	HypDec1:=HyperbolicSplitting(V1);
 	hypmat1:=Matrix([HypDec1[1][1][1], HypDec1[1][1][2], HypDec1[1][2][1], HypDec1[1][2][2]]);
 	M1:=VerticalJoin(M1, hypmat1*K1);
-	M1:=Submatrix(M1, [1, 3,5,7,2,4,6,8], [1..8]);
+	M1:=Submatrix(M1, [1,3,5,7,2,4,6,8], [1..8]);
 
 	M2:=Matrix([azy2[1]+azy2[2], azy2[1]+azy2[3], azy2[1]+azy2[2]+azy2[3]+azy2[4]]);
 	M2:=VerticalJoin(M2, Solution(J*Transpose(M2), Rhs));
@@ -90,60 +162,31 @@ function map_azygetic(azy1, azy2)
 	B1:=Submatrix(Transpose(M1^(-1)), [1..4], [5..8]);
 	C1:=Submatrix(Transpose(M1^(-1)), [5..8], [1..4]);
 	D1:=Submatrix(Transpose(M1^(-1)), [5..8], [5..8]);
-        A2:=Submatrix(Transpose(M2^(-1)), [1..4], [1..4]);
+    A2:=Submatrix(Transpose(M2^(-1)), [1..4], [1..4]);
 	B2:=Submatrix(Transpose(M2^(-1)), [1..4], [5..8]);
 	C2:=Submatrix(Transpose(M2^(-1)), [5..8], [1..4]);
 	D2:=Submatrix(Transpose(M2^(-1)), [5..8], [5..8]);
-	vec1+:= Vector(Diagonal(B1*Transpose(A1)) cat Diagonal(D1*Transpose(C1)));
-	vec2+:= Vector(Diagonal(B2*Transpose(A2)) cat Diagonal(D2*Transpose(C2)));
-	trans:= vec1+vec2;
-	//TODO still does not work for all cases of the pairing
-	if &+[Eltseq(vec1)[i]*Eltseq(trans)[i+4]: i in [1..4]] eq 1 then
-		v1:=Matrix(1,2, Eltseq(vec1)[3..4]  );
-                v2:=Matrix(1,2, Eltseq(vec1)[7..8]  );
-                w2:=Matrix(1,2, Eltseq(trans)[7..8]  );
-		if v2+w2 ne 0 then
-			min1:=Min([i: i in [1..2]| Eltseq(v1)[i] ne 0]);
-	                min2:=Min([i: i in [1..2]| Eltseq(v2+w2)[i] ne 0]);
-			Vd2:=VectorSpace(GF(2),2);
-			Mat1:=Matrix(2,2, [Vd2!v1, Vd2.min1]);
-	                Mat2:=Matrix(2,2, [Vd2!(v2+w2), Vd2.min1]);
-		        if (v1*Transpose(v2))[1,1] eq 0 then
-				Arot:=Mat2^(-1)*Matrix(GF(2), [[0,1],[1,0]])*Transpose(Mat1^(-1));
-			else 
-				Arot:=Mat2^(-1)*Transpose(Mat1^(-1));
-			end if;
-		        id2:=IdentityMatrix(GF(2),2);
-			Srot:=DiagonalJoin([id2, Arot, id2, Transpose(Arot)^(-1)]);
-		else 
-			v1:=Matrix(1,3, Eltseq(vec1)[2..4]  );
-	                v2:=Matrix(1,3, Eltseq(vec1)[6..8]  );
-			Rhs:=Vector([(v1*Transpose(v2))[1,1]+v1[1,1]]);
-			col:=Solution( Matrix(2,1, Eltseq(vec1)[3..4])  , Rhs);
-			Srot:=IdentityMatrix(GF(2),8);
-			Srot[3,2]:=col[1];
-			Srot[4,2]:=col[2];
-			Srot[6,7]:=col[1];
-			Srot[6,8]:=col[2];
-		end if;
-		vec1 := vec1 * Srot;
-		trans:= vec1+vec2;
-	else 
-		Srot:=IdentityMatrix(GF(2),8);
-	end if;
+	vec1 +:= Vector(Diagonal(B1*Transpose(A1)) cat Diagonal(D1*Transpose(C1)));
+	vec2 +:= Vector(Diagonal(B2*Transpose(A2)) cat Diagonal(D2*Transpose(C2)));
+	trans := vec1+vec2;
+    Srot := correct_pairing(vec1, trans, 1);
+    vec1 := vec1 * Srot;
+    trans := vec1+vec2;
 	matx:=Matrix([[1+vec1[6], vec1[7], vec1[8],0,0,0],[0, vec1[6], 0, 1+vec1[7], vec1[8],0], [0, 0, vec1[6], 0, vec1[7], 1+vec1[8]]] );
 	print "\n";
 	print matx, vec1, vec2, trans;
 	sol:=Solution(Transpose(matx), Vector(Eltseq(trans)[2..4]));
 	Bx:=Matrix([[0,0,0,0],[0,sol[1], sol[2], sol[3]],[0,sol[2], sol[4], sol[5]],[0,sol[3], sol[5], sol[6]]]);
-	Sx:=BlockMatrix(2,2,[[id, Matrix([[0,0,0,0],[0,sol[1], sol[2], sol[3]],[0,sol[2], sol[4], sol[5]],[0,sol[3], sol[5], sol[6]]])  ], [zer, id]]);
+	Sx:=BlockMatrix(2,2,[[id, Matrix([[0,0,0,0],[0, sol[1], sol[2], sol[3]],[0,sol[2], sol[4], sol[5]],[0,sol[3], sol[5], sol[6]]])  ], [zer, id]]);
 
 	vec1 +:= Vector(Eltseq(trans)[1..4] cat [GF(2)!0: i in [1..4]]  );
+    Srot2 := correct_pairing(vec1,trans,2);
+    vec1 := vec1 * Srot2;
+    trans := vec1+vec2;
 	maty:=Matrix([[1+vec1[3], vec1[4], 0],[0, vec1[3], 1+vec1[4]]] );
 	sol:=Solution(Transpose(maty), Vector(Eltseq(trans)[7..8]));
 	Sy:=BlockMatrix(2,2,[[id, zer], [Matrix([[0,0,0,0],[0,0,0,0],[0,0,sol[1], sol[2]], [0,0,sol[2], sol[3]]]), id]]);
-	return Transpose(M1^(-1)*Srot*Transpose(Sx)*Transpose(Sy)*M2);
-
+	return Transpose(M1^(-1)*Srot*Transpose(Sx)*Srot2*Transpose(Sy)*M2);
 end function;
 
 function special_fundamental_system(azy)
