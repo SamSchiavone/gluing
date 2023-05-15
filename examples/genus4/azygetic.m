@@ -32,7 +32,7 @@ K1:=Kernel(Transpose(M)*J*M);
 cos:=[Matrix(8,1, Eltseq(q6+k)): k in K];
 sys:=[x: x in cos| (Transpose(x)*J1*x)[1,1] eq 1];
 eta:=M*Matrix(3, 1, Basis(K1)[1]);
-sys1:=[s:s in sys s[1,1] eq 0];
+sys1:=[s:s in sys | s[1,1] eq 0];
 w:=Basis(K1)[1]*Transpose(M);
 T:=Matrix(GF(2), [[1,1,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]);
  Blo:=BlockMatrix([[(Transpose(T))^(-1), zer],[zer, T]]);
@@ -97,9 +97,43 @@ function map_azygetic(azy1, azy2)
 	vec1+:= Vector(Diagonal(B1*Transpose(A1)) cat Diagonal(D1*Transpose(C1)));
 	vec2+:= Vector(Diagonal(B2*Transpose(A2)) cat Diagonal(D2*Transpose(C2)));
 	trans:= vec1+vec2;
-	//TODO: Special case where vec1_1^t * trans_2 = 1 does not work yet
+	//TODO still does not work for all cases of the pairing
+	if &+[Eltseq(vec1)[i]*Eltseq(trans)[i+4]: i in [1..4]] eq 1 then
+		v1:=Matrix(1,2, Eltseq(vec1)[3..4]  );
+                v2:=Matrix(1,2, Eltseq(vec1)[7..8]  );
+                w2:=Matrix(1,2, Eltseq(trans)[7..8]  );
+		if v2+w2 ne 0 then
+			min1:=Min([i: i in [1..2]| Eltseq(v1)[i] ne 0]);
+	                min2:=Min([i: i in [1..2]| Eltseq(v2+w2)[i] ne 0]);
+			Vd2:=VectorSpace(GF(2),2);
+			Mat1:=Matrix(2,2, [Vd2!v1, Vd2.min1]);
+	                Mat2:=Matrix(2,2, [Vd2!(v2+w2), Vd2.min1]);
+		        if (v1*Transpose(v2))[1,1] eq 0 then
+				Arot:=Mat2^(-1)*Matrix(GF(2), [[0,1],[1,0]])*Transpose(Mat1^(-1));
+			else 
+				Arot:=Mat2^(-1)*Transpose(Mat1^(-1));
+			end if;
+		        id2:=IdentityMatrix(GF(2),2);
+			Srot:=DiagonalJoin([id2, Arot, id2, Transpose(Arot)^(-1)]);
+		else 
+			v1:=Matrix(1,3, Eltseq(vec1)[2..4]  );
+	                v2:=Matrix(1,3, Eltseq(vec1)[6..8]  );
+			Rhs:=Vector([(v1*Transpose(v2))[1,1]+v1[1,1]]);
+			col:=Solution( Matrix(2,1, Eltseq(vec1)[3..4])  , Rhs);
+			Srot:=IdentityMatrix(GF(2),8);
+			Srot[3,2]:=col[1];
+			Srot[4,2]:=col[2];
+			Srot[6,7]:=col[1];
+			Srot[6,8]:=col[2];
+		end if;
+		vec1 := vec1 * Srot;
+		trans:= vec1+vec2;
+	else 
+		Srot:=IdentityMatrix(GF(2),8);
+	end if;
 	matx:=Matrix([[1+vec1[6], vec1[7], vec1[8],0,0,0],[0, vec1[6], 0, 1+vec1[7], vec1[8],0], [0, 0, vec1[6], 0, vec1[7], 1+vec1[8]]] );
-	print vec1, vec2, matx, trans;
+	print "\n";
+	print matx, vec1, vec2, trans;
 	sol:=Solution(Transpose(matx), Vector(Eltseq(trans)[2..4]));
 	Bx:=Matrix([[0,0,0,0],[0,sol[1], sol[2], sol[3]],[0,sol[2], sol[4], sol[5]],[0,sol[3], sol[5], sol[6]]]);
 	Sx:=BlockMatrix(2,2,[[id, Matrix([[0,0,0,0],[0,sol[1], sol[2], sol[3]],[0,sol[2], sol[4], sol[5]],[0,sol[3], sol[5], sol[6]]])  ], [zer, id]]);
@@ -108,7 +142,7 @@ function map_azygetic(azy1, azy2)
 	maty:=Matrix([[1+vec1[3], vec1[4], 0],[0, vec1[3], 1+vec1[4]]] );
 	sol:=Solution(Transpose(maty), Vector(Eltseq(trans)[7..8]));
 	Sy:=BlockMatrix(2,2,[[id, zer], [Matrix([[0,0,0,0],[0,0,0,0],[0,0,sol[1], sol[2]], [0,0,sol[2], sol[3]]]), id]]);
-	return Transpose(M1^(-1)*Transpose(Sx)*Transpose(Sy)*M2);
+	return Transpose(M1^(-1)*Srot*Transpose(Sx)*Transpose(Sy)*M2);
 
 end function;
 
@@ -137,7 +171,7 @@ function special_fundamental_system(azy)
 	return [n+vec: n in Transpose(S*N)[1..4]];
 end function;
 
-for i in [1..2] do
+for i in [9] do
 N1:=special_fundamental_system(Transpose(N)[1..3] cat [Vector(sys[i])]);
 Special:=Transpose(Matrix(Transpose(N)[1..3] cat [Vector(sys[i])] cat N1));
 is_azygetic(Special);
@@ -153,7 +187,7 @@ vec:= Vector(Diagonal(B*Transpose(A)) cat Diagonal(D*Transpose(C)));
 print [n+vec: n in Transpose(S*N)[1..4]];
 
 
-S:=map_azygetic(Transpose(N)[1..4], Transpose(N)[1..3] cat [Vector(sys[2])]);
+S:=map_azygetic(Transpose(N)[1..4], Transpose(N)[1..3] cat [Vector(sys[3])]);
 A:=Submatrix(S, [1..4], [1..4]);
 B:=Submatrix(S, [1..4], [5..8]);
 C:=Submatrix(S, [5..8], [1..4]);
