@@ -43,3 +43,122 @@ Ortho:=Blo2*Blo;
 sysnew:=[Transpose(Ortho)*sys[i]: i in [1..20]];
 sys1new:=[Eltseq(s): s in sysnew| s[5,1] eq 0];
 proj:=[[s[2..4],s[6..8]]: s in sys1new];
+
+
+
+function is_azygetic(chars)
+	Nchars:=Ncols(chars);
+	i:=1;
+	for j in [i+1..Nchars] do
+		for k in [j+1..Nchars] do
+			submat:=Submatrix(chars, [1..8], [i,j,k]);
+			mat:= Transpose(submat)*J*submat;
+			if mat[1,2]+mat[1,3]+mat[2,3] eq 0 then
+				return false;
+			end if;
+		end for;
+	end for;
+	return true;
+end function;
+
+function map_azygetic(azy1, azy2)
+	Rhs:=Vector([GF(2)|0, 0,1]);
+	M1:=Matrix([azy1[1]+azy1[2], azy1[1]+azy1[3], azy1[1]+azy1[2]+azy1[3]+azy1[4]]);
+	M1:=VerticalJoin(M1, Solution(J*Transpose(M1), Rhs));
+	K1:=Matrix(Basis(Kernel(J*Transpose(M1))));
+	V1:=VectorSpace(GF(2), 4, K1*J*Transpose(K1));
+	HypDec1:=HyperbolicSplitting(V1);
+	hypmat1:=Matrix([HypDec1[1][1][1], HypDec1[1][1][2], HypDec1[1][2][1], HypDec1[1][2][2]]);
+	M1:=VerticalJoin(M1, hypmat1*K1);
+	M1:=Submatrix(M1, [1, 3,5,7,2,4,6,8], [1..8]);
+
+	M2:=Matrix([azy2[1]+azy2[2], azy2[1]+azy2[3], azy2[1]+azy2[2]+azy2[3]+azy2[4]]);
+	M2:=VerticalJoin(M2, Solution(J*Transpose(M2), Rhs));
+	K2:=Matrix(Basis(Kernel(J*Transpose(M2))));
+	V2:=VectorSpace(GF(2), 4, K2*J*Transpose(K2));
+	HypDec2:=HyperbolicSplitting(V2);
+	hypmat2:=Matrix([HypDec2[1][1][1], HypDec2[1][1][2], HypDec2[1][2][1], HypDec2[1][2][2]]);
+	M2:=VerticalJoin(M2, hypmat2*K2);
+	M2:=Submatrix(M2, [1, 3,5,7,2,4,6,8], [1..8]);
+	S:=M1^(-1)*M2;
+	if &or[(Matrix(azy1)*S-Matrix(azy2))[1] ne (Matrix(azy1)*S-Matrix(azy2))[i]: i in [2..4]] then
+		error("Error: First symplectic Transformation wrong");
+	end if;
+	vec1:=(Matrix(azy1)*M1^(-1))[1];
+	vec2:=(Matrix(azy2)*M2^(-1))[1];
+	A1:=Submatrix(Transpose(M1^(-1)), [1..4], [1..4]);
+	B1:=Submatrix(Transpose(M1^(-1)), [1..4], [5..8]);
+	C1:=Submatrix(Transpose(M1^(-1)), [5..8], [1..4]);
+	D1:=Submatrix(Transpose(M1^(-1)), [5..8], [5..8]);
+        A2:=Submatrix(Transpose(M2^(-1)), [1..4], [1..4]);
+	B2:=Submatrix(Transpose(M2^(-1)), [1..4], [5..8]);
+	C2:=Submatrix(Transpose(M2^(-1)), [5..8], [1..4]);
+	D2:=Submatrix(Transpose(M2^(-1)), [5..8], [5..8]);
+	vec1+:= Vector(Diagonal(B1*Transpose(A1)) cat Diagonal(D1*Transpose(C1)));
+	vec2+:= Vector(Diagonal(B2*Transpose(A2)) cat Diagonal(D2*Transpose(C2)));
+	trans:= vec1+vec2;
+	//TODO: Special case where vec1_1^t * trans_2 = 1 does not work yet
+	matx:=Matrix([[1+vec1[6], vec1[7], vec1[8],0,0,0],[0, vec1[6], 0, 1+vec1[7], vec1[8],0], [0, 0, vec1[6], 0, vec1[7], 1+vec1[8]]] );
+	print vec1, vec2, matx, trans;
+	sol:=Solution(Transpose(matx), Vector(Eltseq(trans)[2..4]));
+	Bx:=Matrix([[0,0,0,0],[0,sol[1], sol[2], sol[3]],[0,sol[2], sol[4], sol[5]],[0,sol[3], sol[5], sol[6]]]);
+	Sx:=BlockMatrix(2,2,[[id, Matrix([[0,0,0,0],[0,sol[1], sol[2], sol[3]],[0,sol[2], sol[4], sol[5]],[0,sol[3], sol[5], sol[6]]])  ], [zer, id]]);
+
+	vec1 +:= Vector(Eltseq(trans)[1..4] cat [GF(2)!0: i in [1..4]]  );
+	maty:=Matrix([[1+vec1[3], vec1[4], 0],[0, vec1[3], 1+vec1[4]]] );
+	sol:=Solution(Transpose(maty), Vector(Eltseq(trans)[7..8]));
+	Sy:=BlockMatrix(2,2,[[id, zer], [Matrix([[0,0,0,0],[0,0,0,0],[0,0,sol[1], sol[2]], [0,0,sol[2], sol[3]]]), id]]);
+	return Transpose(M1^(-1)*Transpose(Sx)*Transpose(Sy)*M2);
+
+end function;
+
+function special_fundamental_system(azy)
+	zer:=ZeroMatrix(GF(2), 4,4);
+	zer1:=ZeroMatrix(GF(2), 4,1);
+	zer2:=ZeroMatrix(GF(2), 4,2);
+	id:=IdentityMatrix(GF(2),4);
+	J:=BlockMatrix(2,2, [zer,id, id,zer]);
+	J1:=BlockMatrix(2,2, [zer,id, zer,zer]);
+	triang:=zer;
+	for i in [1..4] do
+		for j in [i..4] do
+			triang[i,j]:=1;
+		end for;
+	end for;
+	M:=VerticalJoin(id, triang);
+
+	N:=VerticalJoin(HorizontalJoin(id, zer2), HorizontalJoin(zer1, HorizontalJoin(triang, zer1)) );
+	S:=map_azygetic(Transpose(M)[1..4], azy);
+	A:=Submatrix(S, [1..4], [1..4]);
+	B:=Submatrix(S, [1..4], [5..8]);
+	C:=Submatrix(S, [5..8], [1..4]);
+	D:=Submatrix(S, [5..8], [5..8]);
+	vec:= Vector(Diagonal(B*Transpose(A)) cat Diagonal(D*Transpose(C)));
+	return [n+vec: n in Transpose(S*N)[1..4]];
+end function;
+
+for i in [1..2] do
+N1:=special_fundamental_system(Transpose(N)[1..3] cat [Vector(sys[i])]);
+Special:=Transpose(Matrix(Transpose(N)[1..3] cat [Vector(sys[i])] cat N1));
+is_azygetic(Special);
+end for;
+
+
+S:=map_azygetic(Transpose(N)[1..4], Transpose(N)[1..3] cat [Vector(sys[1])]);
+A:=Submatrix(S, [1..4], [1..4]);
+B:=Submatrix(S, [1..4], [5..8]);
+C:=Submatrix(S, [5..8], [1..4]);
+D:=Submatrix(S, [5..8], [5..8]);
+vec:= Vector(Diagonal(B*Transpose(A)) cat Diagonal(D*Transpose(C)));
+print [n+vec: n in Transpose(S*N)[1..4]];
+
+
+S:=map_azygetic(Transpose(N)[1..4], Transpose(N)[1..3] cat [Vector(sys[2])]);
+A:=Submatrix(S, [1..4], [1..4]);
+B:=Submatrix(S, [1..4], [5..8]);
+C:=Submatrix(S, [5..8], [1..4]);
+D:=Submatrix(S, [5..8], [5..8]);
+vec:= Vector(Diagonal(B*Transpose(A)) cat Diagonal(D*Transpose(C)));
+print [n+vec: n in Transpose(S*N)[1..4]];
+
+
