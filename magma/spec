@@ -6,6 +6,7 @@
     divtochar.m
     galois.m
     gluings.m
+    signs.m
     theta.m
     reconstruction.m
   }
