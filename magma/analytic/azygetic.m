@@ -14,6 +14,7 @@ function is_azygetic(chars)
 	return true;
 end function;
 
+<<<<<<< HEAD:magma/analytic/azygetic.m
 function Add1at2(vec)
 	id:=IdentityMatrix(GF(2), 4);
 	zer:=ZeroMatrix(GF(2), 4,4);
@@ -67,14 +68,13 @@ function map_azygetic(azy1, azy2)
 	id:=IdentityMatrix(GF(2), 4);
         zer:=ZeroMatrix(GF(2), 4,4);
 	Rhs:=Vector([GF(2)|0, 0,1]);
-	M1:=Matrix([azy1[1]+azy1[2], azy1[1]+azy1[3], azy1[1]+azy1[2]+azy1[3]+azy1[4]]);
 	M1:=VerticalJoin(M1, Solution(J*Transpose(M1), Rhs));
 	K1:=Matrix(Basis(Kernel(J*Transpose(M1))));
 	V1:=VectorSpace(GF(2), 4, K1*J*Transpose(K1));
 	HypDec1:=HyperbolicSplitting(V1);
 	hypmat1:=Matrix([HypDec1[1][1][1], HypDec1[1][1][2], HypDec1[1][2][1], HypDec1[1][2][2]]);
 	M1:=VerticalJoin(M1, hypmat1*K1);
-	M1:=Submatrix(M1, [1, 3,5,7,2,4,6,8], [1..8]);
+	M1:=Submatrix(M1, [1,3,5,7,2,4,6,8], [1..8]);
 
 	M2:=Matrix([azy2[1]+azy2[2], azy2[1]+azy2[3], azy2[1]+azy2[2]+azy2[3]+azy2[4]]);
 	M2:=VerticalJoin(M2, Solution(J*Transpose(M2), Rhs));
@@ -94,7 +94,7 @@ function map_azygetic(azy1, azy2)
 	B1:=Submatrix(Transpose(M1^(-1)), [1..4], [5..8]);
 	C1:=Submatrix(Transpose(M1^(-1)), [5..8], [1..4]);
 	D1:=Submatrix(Transpose(M1^(-1)), [5..8], [5..8]);
-        A2:=Submatrix(Transpose(M2^(-1)), [1..4], [1..4]);
+    A2:=Submatrix(Transpose(M2^(-1)), [1..4], [1..4]);
 	B2:=Submatrix(Transpose(M2^(-1)), [1..4], [5..8]);
 	C2:=Submatrix(Transpose(M2^(-1)), [5..8], [1..4]);
 	D2:=Submatrix(Transpose(M2^(-1)), [5..8], [5..8]);
