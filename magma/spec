@@ -9,6 +9,7 @@
     signs.m
     theta.m
     reconstruction.m
+    azygetic.m
   }
   interpolated
   {
