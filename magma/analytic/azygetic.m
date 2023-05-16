@@ -1,5 +1,8 @@
 
 function is_azygetic(chars)
+	id:=IdentityMatrix(GF(2), 4);
+        zer:=ZeroMatrix(GF(2), 4,4);
+	J:=BlockMatrix(2,2, [zer,id, id,zer]);
 	Nchars:=Ncols(chars);
 	i:=1;
 	for j in [i+1..Nchars] do
@@ -14,7 +17,7 @@ function is_azygetic(chars)
 	return true;
 end function;
 
-<<<<<<< HEAD:magma/analytic/azygetic.m
+
 function Add1at2(vec)
 	id:=IdentityMatrix(GF(2), 4);
 	zer:=ZeroMatrix(GF(2), 4,4);
@@ -67,7 +70,9 @@ end function;
 function map_azygetic(azy1, azy2)
 	id:=IdentityMatrix(GF(2), 4);
         zer:=ZeroMatrix(GF(2), 4,4);
+	J:=BlockMatrix(2,2, [[zer, id], [id, zer]]);
 	Rhs:=Vector([GF(2)|0, 0,1]);
+        M1:=Matrix([azy1[1]+azy1[2], azy1[1]+azy1[3], azy1[1]+azy1[2]+azy1[3]+azy1[4]]);
 	M1:=VerticalJoin(M1, Solution(J*Transpose(M1), Rhs));
 	K1:=Matrix(Basis(Kernel(J*Transpose(M1))));
 	V1:=VectorSpace(GF(2), 4, K1*J*Transpose(K1));
