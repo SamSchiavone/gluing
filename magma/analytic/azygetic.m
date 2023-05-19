@@ -147,48 +147,123 @@ intrinsic special_fundamental_system(azy::SeqEnum) -> SeqEnum, SeqEnum, AlgMatEl
 	return [n+vec: n in Transpose(S*N)[1..6]], [n+vec: n in Transpose(S*N2)[1..6]], S;
 end intrinsic;
 
+
 function decompose_symplectic(S)
-     k:=BaseRing(S);
+     kappa:=1;
+     ZZ:=Integers();
+     ZZ4:=Integers(4);
      N:=Nrows(S) div 2;
-     id:=IdentityMatrix(k, N);
-     zer:=ZeroMatrix(k, N, N);
+     id:=IdentityMatrix(GF(2), N);
+     zer:=ZeroMatrix(GF(2), N, N);
+     idZ:=IdentityMatrix(ZZ, N);
+     zerZ:=ZeroMatrix(ZZ, N, N);
+     J:=BlockMatrix(2,2,[[zerZ, idZ], [-idZ, zerZ]]);
      A:=Submatrix(S, [1..N], [1..N]);
      B:=Submatrix(S, [1..N], [N+1..2*N]);
      C:=Submatrix(S, [N+1..2*N], [1..N]);
      D:=Submatrix(S, [N+1..2*N], [N+1..2*N]);
      Ech, T1:=EchelonForm(C);
      Diag, T2:=EchelonForm(Transpose(Ech));
-     ret1:=[DiagonalJoin(Transpose(T1), T1^(-1))];
-     ret2:=[DiagonalJoin(Transpose(T2)^(-1), T2)];
-     S:=ret1[1]^(-1)*S*ret2[1]^(-1);
+     T1lift:=ChangeRing(ChangeRing(T1, ZZ), ZZ4);
+     T2lift:=ChangeRing(ChangeRing(T2, ZZ), ZZ4);
+     det1:=ZZ!(Determinant(T1lift)+2)-2;
+     det2:=ZZ!(Determinant(T2lift)+2)-2;
+     kappa*:= det1*det2;
+     ret1:=[ChangeRing(DiagonalJoin(Transpose(T1lift), T1lift^(-1)), ZZ)];
+     ret2:=[ChangeRing(DiagonalJoin(Transpose(T2lift)^(-1),  T2lift), ZZ)];
+     trafo1:=DiagonalJoin(Transpose(T1) , T1^(-1));
+     trafo2:=DiagonalJoin(Transpose(T2)^(-1), T2);
+     S:=trafo1^(-1)*S*trafo2^(-1);
      A:=Submatrix(S, [1..N], [1..N]);
      B:=Submatrix(S, [1..N], [N+1..2*N]);
      C:=Submatrix(S, [N+1..2*N], [1..N]);
      D:=Submatrix(S, [N+1..2*N], [N+1..2*N]);
      nu:=Max([0] cat [i: i in [1..N]| Diag[i,i] ne 0]);
-     X:=IdentityMatrix(k, nu)-Submatrix(A, [1..nu], [1..nu]);
-     X:=DiagonalJoin(X, ZeroMatrix(k, N-nu, N-nu));
-     Append(~ret1, BlockMatrix(2,2,[[id, -X], [zer, id]]));
-     S:=ret1[2]^(-1)*S;
+     X:=IdentityMatrix(GF(2), nu)-Submatrix(A, [1..nu], [1..nu]);
+     X:=DiagonalJoin(X, ZeroMatrix(GF(2), N-nu, N-nu));
+     trafo:=BlockMatrix(2,2,[[id, X], [zer, id]]);
+     Append(~ret1, ChangeRing(trafo, ZZ));
+     S:=trafo^(-1)*S;
+     A:=Submatrix(S, [1..N], [1..N]);
+     Alift:=ChangeRing(ChangeRing(A, ZZ), ZZ4);
+     detA:=ZZ!(Determinant(Alift)+2)-2;
+     kappa *:= detA;
+     trafo:=DiagonalJoin(A , Transpose(A)^(-1));
+     Append(~ret1, ChangeRing(DiagonalJoin(Alift, Transpose(Alift)^(-1)), ZZ));
+     S:=trafo^(-1)*S;
      C:=Submatrix(S, [N+1..2*N], [1..N]);
-     Append(~ret1, BlockMatrix(2,2,[[id, zer], [C, id]]));
-     S:=ret1[3]^(-1)*S;
-     Append(~ret2, S);
-     return ret1 cat Reverse(ret2);
+     trafo:=BlockMatrix(2,2,[[id, zer], [C, id]]);
+     Append(~ret1, J);
+     Append(~ret1, ChangeRing(BlockMatrix(2,2,[[id, C], [zer, id]]), ZZ));
+     Append(~ret1, J);
+     kappa *:= (-1)^N;
+     S:=trafo^(-1)*S;
+     Append(~ret2, ChangeRing(S, ZZ));
+     return ret1 cat Reverse(ret2), kappa;
 end function;
 
-function lift(A)
-//Lifts an invertible matrix in GF(2) to an invertible matrix over Z mod 8 with determinant 1
+intrinsic signs_in_derivative_formula(S:: AlgMatElt)-> SeqEnum
+{Computes the signs on the right hand side of the generalized Jacobi derivative formula}
+	dec, kappa:=decompose_symplectic(Transpose(S));
+	psi1:=0;
+	psi2:=0;
+	ZZ:=Integers();
+	zer:=ZeroMatrix(ZZ, 4,4);
+	zer1:=ZeroMatrix(ZZ, 4,1);
+	zer2:=ZeroMatrix(ZZ, 4,2);
+	id:=IdentityMatrix(ZZ,4);
+	J1:=BlockMatrix([[zer, id],[zer,zer]]);
+	triang:=zer;
+	for i in [1..4] do
+		for j in [i..4] do
+			triang[i,j]:=1;
+		end for;
+	end for;
+	M:=VerticalJoin(id, triang);
+	N:=VerticalJoin(HorizontalJoin(id, zer2), HorizontalJoin(zer1, HorizontalJoin(triang, zer1)) );
+        G:=(Matrix(ZZ,6,6, [1: i in [1..36]])+IdentityMatrix(ZZ, 6));
+        N2:=N*G;
+        for de in dec do
+        	Si:=Transpose(de);
+        	A:=Submatrix(Si, [1..4], [1..4]);
+     		B:=Submatrix(Si, [1..4], [5..8]);
+	     	C:=Submatrix(Si, [5..8], [1..4]);
+	     	D:=Submatrix(Si, [5..8], [5..8]);
+	     	
+	     	Mpre:=Si*M;
+	     	Npre:=Si*N;
+	     	N2pre:=Si*N2;
+	     	vecpre:= -2*Vector([0,0,0,0] cat Diagonal(D*Transpose(C)));
+	     	Mpre +:= Transpose(Matrix([vecpre: i in [1..4]]));
+		Npre +:= Transpose(Matrix([vecpre: i in [1..6]]));
+		N2pre +:= Transpose(Matrix([vecpre: i in [1..6]]));
+		psi1+:=Trace(Transpose(Mpre)*J1*Mpre)-Trace(Transpose(M)*J1*M)-Trace(Transpose(Npre)*J1*Npre)+Trace(Transpose(N)*J1*N);
+		psi2+:=Trace(Transpose(Mpre)*J1*Mpre)-Trace(Transpose(M)*J1*M)-Trace(Transpose(N2pre)*J1*N2pre)+Trace(Transpose(N2)*J1*N2);		
+		M:=Si*M;
+	     	N:=Si*N;
+	     	N2:=Si*N2;
+	     	vec:= Vector(Diagonal(B*Transpose(A)) cat Diagonal(D*Transpose(C)));
+		M +:= Transpose(Matrix([vec: i in [1..4]]));
+		N +:= Transpose(Matrix([vec: i in [1..6]]));
+		N2 +:= Transpose(Matrix([vec: i in [1..6]]));
+	end for;
+	carryM:= M div 2;
+	carryN:= N div 2;
+	carryN2:= N2 div 2;	
+	switch1:=(-1)^(Trace(Transpose(M)*J1*carryM)+Trace(Transpose(N)*J1*carryN));
+	switch2:=(-1)^(Trace(Transpose(M)*J1*carryM)+Trace(Transpose(N2)*J1*carryN2));
+        bool1, quo1:=IsDivisibleBy(psi1,4);
+        bool2, quo2:=IsDivisibleBy(psi2,4);
+        if bool1 and bool2 then
+	       	return [kappa*(-1)^(quo1)*switch1, -kappa*(-1)^(quo2)*switch2]; //TODO: Find initial signs
+        else
+       	 	error("Not divisible by 4");
+	end if;
+end intrinsic;
 
 
 
 
-end function;
-
-function signs(S)
-
-
-end function;
 
 	
 /* For testing:
