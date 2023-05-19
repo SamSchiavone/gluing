@@ -147,6 +147,49 @@ intrinsic special_fundamental_system(azy::SeqEnum) -> SeqEnum, SeqEnum, AlgMatEl
 	return [n+vec: n in Transpose(S*N)[1..6]], [n+vec: n in Transpose(S*N2)[1..6]], S;
 end intrinsic;
 
+function decompose_symplectic(S)
+     k:=BaseRing(S);
+     N:=Nrows(S) div 2;
+     id:=IdentityMatrix(k, N);
+     zer:=ZeroMatrix(k, N, N);
+     A:=Submatrix(S, [1..N], [1..N]);
+     B:=Submatrix(S, [1..N], [N+1..2*N]);
+     C:=Submatrix(S, [N+1..2*N], [1..N]);
+     D:=Submatrix(S, [N+1..2*N], [N+1..2*N]);
+     Ech, T1:=EchelonForm(C);
+     Diag, T2:=EchelonForm(Transpose(Ech));
+     ret1:=[DiagonalJoin(Transpose(T1), T1^(-1))];
+     ret2:=[DiagonalJoin(Transpose(T2)^(-1), T2)];
+     S:=ret1[1]^(-1)*S*ret2[1]^(-1);
+     A:=Submatrix(S, [1..N], [1..N]);
+     B:=Submatrix(S, [1..N], [N+1..2*N]);
+     C:=Submatrix(S, [N+1..2*N], [1..N]);
+     D:=Submatrix(S, [N+1..2*N], [N+1..2*N]);
+     nu:=Max([0] cat [i: i in [1..N]| Diag[i,i] ne 0]);
+     X:=IdentityMatrix(k, nu)-Submatrix(A, [1..nu], [1..nu]);
+     X:=DiagonalJoin(X, ZeroMatrix(k, N-nu, N-nu));
+     Append(~ret1, BlockMatrix(2,2,[[id, -X], [zer, id]]));
+     S:=ret1[2]^(-1)*S;
+     C:=Submatrix(S, [N+1..2*N], [1..N]);
+     Append(~ret1, BlockMatrix(2,2,[[id, zer], [C, id]]));
+     S:=ret1[3]^(-1)*S;
+     Append(~ret2, S);
+     return ret1 cat Reverse(ret2);
+end function;
+
+function lift(A)
+//Lifts an invertible matrix in GF(2) to an invertible matrix over Z mod 8 with determinant 1
+
+
+
+
+end function;
+
+function signs(S)
+
+
+end function;
+
 	
 /* For testing:
 
