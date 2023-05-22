@@ -26,8 +26,12 @@ v := Vector([GF(2) | 0, 0, 0, 0, 1, 0, 0, 0 ]);
 steiner := [];
 steinerrie:=[];
 //1st 7 form an aronhold set.
-aronhold:=[[[1,1,1],[1,1,1]],[[0,0,1],[0,1,1]],[[0,1,1],[0,0,1]],[[1,0,1],[1,0,0]],[[1,0,0],[1,0,1]],[[1,1,0],[0,1,0]],[[0,1,0],[1,1,0]], [[0,1,0],[0,1,0]], [[1,0,0],[1,1,0]], [[1,1,0],[1,0,0]]];
-rie:=[[[0,0,0],[0,0,1]],[[0,0,0],[1,0,1]],[[0,0,0],[0,1,1]],[[0,0,0],[1,1,1]],[[0,0,1],[0,0,0]],[[0,0,1],[1,0,0]],[[0,0,1],[0,1,0]], [[0,0,1],[1,1,0]],[[0,0,0],[1,1,0]],[[0,0,0],[0,0,0]],[[0,0,0],[0,1,0]],[[0,0,0],[1,0,0]]];
+aronhold := [
+  [[1,1,1],[1,1,1]],[[0,0,1],[0,1,1]],[[0,1,1],[0,0,1]],[[1,0,1],[1,0,0]],[[1,0,0],[1,0,1]],[[1,1,0],[0,1,0]],[[0,1,0],[1,1,0]], [[0,1,0],[0,1,0]], [[1,0,0],[1,1,0]], [[1,1,0],[1,0,0]]
+  ];
+rie := [
+  [[0,0,0],[0,0,1]],[[0,0,0],[1,0,1]],[[0,0,0],[0,1,1]],[[0,0,0],[1,1,1]],[[0,0,1],[0,0,0]],[[0,0,1],[1,0,0]],[[0,0,1],[0,1,0]], [[0,0,1],[1,1,0]],[[0,0,0],[1,1,0]],[[0,0,0],[0,0,0]],[[0,0,0],[0,1,0]],[[0,0,0],[1,0,0]]
+  ];
 r:=10;
 
 
@@ -54,18 +58,18 @@ end function;
 
 function check_azygetic(chars)
   nchar := #chars;
-    i:=1;
-    for j in [i+1..nchar] do
-    for k in [j+1..nchar] do
-      chari:=Matrix(GF(2), 1, 8, chars[i]);
-      charj:=Matrix(GF(2), 1, 8, chars[j]);
-      chark:=Matrix(GF(2), 1, 8, chars[k]);
-      if parity_char(chari)+parity_char(charj)+parity_char(chark)+parity_char(chari+charj+chark) eq 0 then
-         return false;
-      end if;
-    end for;
-    end for;
-    return true;
+  i:=1;
+  for j in [i+1..nchar] do
+  for k in [j+1..nchar] do
+    chari:=Matrix(GF(2), 1, 8, chars[i]);
+    charj:=Matrix(GF(2), 1, 8, chars[j]);
+    chark:=Matrix(GF(2), 1, 8, chars[k]);
+    if parity_char(chari)+parity_char(charj)+parity_char(chark)+parity_char(chari+charj+chark) eq 0 then
+       return false;
+    end if;
+  end for;
+  end for;
+  return true;
 end function;
 
 function DotProductSeq(v1,v2)
@@ -97,20 +101,20 @@ tritangentbasis := [
 /* Code for comparison
 TT2 := [];
 for ca in tritangentsys do
-    pair := [];
-    for c in ca do
-      chara := [ZZ!v : v in Eltseq(c)];
-      chara := [chara[1..4], chara[5..8]];
-      Append(~pair, TritangentPlane(Pi_big, chara));
-    end for;
-    Append(~TT2, pair);
+  pair := [];
+  for c in ca do
+    chara := [ZZ!v : v in Eltseq(c)];
+    chara := [chara[1..4], chara[5..8]];
+    Append(~pair, TritangentPlane(Pi_big, chara));
+  end for;
+  Append(~TT2, pair);
 end for;
 
 TTB := [];
 for c in tritangentbasis do
-      chara := [ZZ!v : v in Eltseq(c)];
-      chara := [chara[1..4], chara[5..8]];
-      Append(~TTB, TritangentPlane(Pi_big, chara));
+  chara := [ZZ!v : v in Eltseq(c)];
+  chara := [chara[1..4], chara[5..8]];
+  Append(~TTB, TritangentPlane(Pi_big, chara));
 end for;
 
 TtoS := Matrix(TTB[1..4]);
@@ -133,37 +137,39 @@ function Tritangents(tau)
   tritangents := [[[CC!0,0,0,0], [CC!0,0,0,0]]: t in [1..10]];
   constant := [CC!0,0,0,0];
   for k in [1..4] do
-    temp_list := [ Vector(t) : t in (tritangentbasis[1..k - 1] cat             [tritangentbasis[5]] cat tritangentbasis[k+1 .. 4])];
-    S1, S2 := special_fundamental_system(temp_list);
+    temp_list := [ Vector(t) : t in (tritangentbasis[1..k - 1] cat [tritangentbasis[5]] cat tritangentbasis[k+1 .. 4])];
+    S1, S2, A := special_fundamental_system(temp_list);
+    signs := signs_in_derivative_formula(A);
     T1 := CC!1;
-        T2 := CC!1;
-        for c in S1 do
-          test := IsDefined(theta_list, c);
-          if not test then
-            chara := [ZZ!v : v in Eltseq(c)];
-            chara := [chara[1..4], chara[5..8]];
-            theta_list[c] :=  Theta([CC | 0,0,0,0], tau : char := chara, prec :=       prec);
-          end if;
-          T1 *:= theta_list[c];
-        end for;
+    T2 := CC!1;
+    for c in S1 do
+      test := IsDefined(theta_list, c);
+      if not test then
+        chara := [ZZ!v : v in Eltseq(c)];
+        chara := [chara[1..4], chara[5..8]];
+        theta_list[c] :=  Theta([CC | 0,0,0,0], tau : char := chara, prec := prec);
+      end if;
+      T1 *:= theta_list[c];
+    end for;
 
-        for c in S2 do
-          test := IsDefined(theta_list, c);
-          if not test then
-            chara := [ZZ!v : v in Eltseq(c)];
-            chara := [chara[1..4], chara[5..8]];
-            theta_list[c] :=  Theta([CC | 0,0,0,0], tau : char := chara, prec :=       prec);
-          end if;
-          T2 *:= theta_list[c];
-        end for;
-     constant[k] := T1 - T2;
+    for c in S2 do
+      test := IsDefined(theta_list, c);
+      if not test then
+        chara := [ZZ!v : v in Eltseq(c)];
+        chara := [chara[1..4], chara[5..8]];
+        theta_list[c] :=  Theta([CC | 0,0,0,0], tau : char := chara, prec := prec);
+      end if;
+      T2 *:= theta_list[c];
+    end for;
+     constant[k] := signs[1]*T1 + signs[2]*T2;
   end for;
 
   for i in [1..10] do
     for j in [1..2] do
       for k in [1..4] do
         temp_list := [ Vector(t) : t in (tritangentbasis[1..k - 1] cat [tritangentsys[i][j]] cat tritangentbasis[k+1 .. 4])];
-        S1, S2 := special_fundamental_system(temp_list);
+        S1, S2, A := special_fundamental_system(temp_list);
+        signs := signs_in_derivative_formula(A);
         T1 := CC!1;
         T2 := CC!1;
         for c in S1 do
@@ -171,7 +177,7 @@ function Tritangents(tau)
           if not test then
             chara := [ZZ!v : v in Eltseq(c)];
             chara := [chara[1..4], chara[5..8]];
-            theta_list[c] :=  Theta([CC | 0,0,0,0], tau : char := chara, prec :=       prec);
+            theta_list[c] :=  Theta([CC | 0,0,0,0], tau : char := chara, prec := prec);
           end if;
           T1 *:= theta_list[c];
         end for;
@@ -181,12 +187,12 @@ function Tritangents(tau)
           if not test then
             chara := [ZZ!v : v in Eltseq(c)];
             chara := [chara[1..4], chara[5..8]];
-            theta_list[c] :=  Theta([CC | 0,0,0,0], tau : char := chara, prec :=       prec);
+            theta_list[c] :=  Theta([CC | 0,0,0,0], tau : char := chara, prec := prec);
           end if;
           T2 *:= theta_list[c];
         end for;
 
-        tritangents[i][j][k] := (T1 - T2)/constant[k];
+        tritangents[i][j][k] := (signs[1]*T1 + signs[2]*T2)/constant[k];
 
       end for;
     end for;
@@ -195,5 +201,27 @@ function Tritangents(tau)
   return tritangents;
 end function;
 
-
+function JacobiNullwerte(tau, odd_thetas)
+  g := Nrows(tau);
+  CC<I> := BaseRing(Parent(tau));
+  prec := Precision(CC);
+  pi := Pi(CC);
+  dets := [];
+  for k in [1..g] do
+    derivs := [];
+    temp_list := [ Vector(t) : t in (odd_thetas[1..k-1] cat [odd_thetas[g+1]] cat odd_thetas[k+1..g])];
+    for c in temp_list do
+      chara := [ZZ!v : v in Eltseq(c)];
+      chara := [chara[1..g], chara[g+1..(2*g)]];
+      for i := 1 to g do
+        dz := [0 : j in [1..g]];
+        dz[i] := 1;
+        Append(~derivs, Theta([CC!0 : j in [1..g]], tau : char := chara, dz := [dz], prec := prec));
+      end for;
+    end for;
+    M := Matrix(g,g,derivs);
+    Append(~dets, pi^(-g)*Determinant(M));
+  end for;
+  return dets;
+end function;
 
