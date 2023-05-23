@@ -26,8 +26,8 @@ function Add1at2(vec)
 	else
 		rhs:=Matrix(GF(2), [[1]]);
 		lhs:=Matrix(GF(2),2,1, Eltseq(vec)[7..8]);
-		sol:=Solution(rhs, lhs);
-                Bx:=Matrix(GF(2), [[0,0,0,0],[0,0, sol[1,1], sol[2,1]],[0,sol[1,1],0,0],[0,sol[2,1], 0,0]]);
+		sol:=Solution(lhs, rhs);
+                Bx:=Matrix(GF(2), [[0,0,0,0],[0,0, sol[1,1], sol[1,2]],[0,sol[1,1],0,0],[0,sol[1,2], 0,0]]);
                 Sx:=BlockMatrix(2,2,[[id, zer  ], [Bx, id]]);
                 return Sx;
 	end if;
@@ -41,7 +41,7 @@ function map_orthogonal(vec)
 	V2:=VectorSpace(GF(2),2);
 	if v1 eq V2!0 and v2 eq V2!0 then
 		B:=Matrix(GF(2), [[1,0],[0,0]]);
-                ret:=BlockMatrix([[id2, B],[zer2, id2]]);
+                ret:=BlockMatrix([[id2, zer2],[B, id2]]);
 		retA:=Submatrix(ret, [1..2], [1..2]);
                 retB:=Submatrix(ret, [1..2], [3..4]);
                 retC:=Submatrix(ret, [3..4], [1..2]);
@@ -90,9 +90,7 @@ function map_azygetic(azy1, azy2)
 	M2:=VerticalJoin(M2, hypmat2*K2);
 	M2:=Submatrix(M2, [1, 3,5,7,2,4,6,8], [1..8]);
 	S:=M1^(-1)*M2;
-	if &or[(Matrix(azy1)*S-Matrix(azy2))[1] ne (Matrix(azy1)*S-Matrix(azy2))[i]: i in [2..4]] then
-		error("Error: First symplectic Transformation wrong");
-	end if;
+	error if &or[(Matrix(azy1)*S-Matrix(azy2))[1] ne (Matrix(azy1)*S-Matrix(azy2))[i]: i in [2..4]] , "Error: First symplectic Transformation wrong";
 	vec1:=(Matrix(azy1)*M1^(-1))[1];
 	vec2:=(Matrix(azy2)*M2^(-1))[1];
 	A1:=Submatrix(Transpose(M1^(-1)), [1..4], [1..4]);
@@ -110,12 +108,27 @@ function map_azygetic(azy1, azy2)
         S2add1at3:=Add1at2(vec2);
 	vec1:=vec1*S1add1at3;
         vec2:=vec2*S2add1at3;
+	error if vec1[2] eq 0, "Mistake in function Add1at2()";
+        error if vec2[2] eq 0, "Mistake in function Add1at2()";
 	Ortho1:=map_orthogonal(vec1);
         Ortho2:=map_orthogonal(vec2);
 	/*print "\n vec1, Ortho1, vec1*Ortho1=";
 	print vec1, Ortho1, vec1*Ortho1;
         print "\n vec2, Ortho2, vec2*Ortho2=";
-	print vec2, Ortho2, vec2*Ortho1;*/
+	print vec2, Ortho2, vec2*Ortho2;*/
+	vec1:=vec1*Ortho1;
+	vec2:=vec2*Ortho2;
+	A1:=Submatrix(Transpose(Ortho1), [1..4], [1..4]);
+        B1:=Submatrix(Transpose(Ortho1), [1..4], [5..8]);
+        C1:=Submatrix(Transpose(Ortho1), [5..8], [1..4]);
+        D1:=Submatrix(Transpose(Ortho1), [5..8], [5..8]);
+	A2:=Submatrix(Transpose(Ortho2), [1..4], [1..4]);
+        B2:=Submatrix(Transpose(Ortho2), [1..4], [5..8]);
+        C2:=Submatrix(Transpose(Ortho2), [5..8], [1..4]);
+        D2:=Submatrix(Transpose(Ortho2), [5..8], [5..8]);
+	vec1+:= Vector(Diagonal(B1*Transpose(A1)) cat Diagonal(D1*Transpose(C1)));
+        vec2+:= Vector(Diagonal(B2*Transpose(A2)) cat Diagonal(D2*Transpose(C2)));
+        error if vec1 ne vec2, "Mistake in map_orthogonal()", Ortho1, Ortho2, vec1, vec2;
 	return Transpose(M1^(-1)*S1add1at3* Ortho1*Ortho2^(-1) *S2add1at3^(-1)   *M2);
 end function;
 
@@ -147,9 +160,24 @@ intrinsic special_fundamental_system(azy::SeqEnum) -> SeqEnum, SeqEnum, AlgMatEl
 	return [n+vec: n in Transpose(S*N)[1..6]], [n+vec: n in Transpose(S*N2)[1..6]], S;
 end intrinsic;
 
+function liftSLN(A, n)
+    ZZ:=Integers();
+    p:=Characteristic(BaseRing(A));
+    assert(BaseRing(A) eq GF(p));
+    N:=Nrows(A);
+    Ainv:=A^(-1);
+    col:=[i : i in [1..N]|Ainv[1,i] ne 0][1];
+    entry:=ZZ!(Ainv[1,col]^(-1));
+    Alift:=A;
+    for i in [2..n] do
+	Alift:=ChangeRing(ChangeRing(Alift, ZZ), Integers(p^i));
+	eps:=ZZ!(Determinant(Alift)-1);
+	Alift[col,1] -:= eps*entry;
+    end for;
+    return Alift;
+end function;
 
 function decompose_symplectic(S)
-     kappa:=1;
      ZZ:=Integers();
      ZZ4:=Integers(4);
      N:=Nrows(S) div 2;
@@ -164,11 +192,8 @@ function decompose_symplectic(S)
      D:=Submatrix(S, [N+1..2*N], [N+1..2*N]);
      Ech, T1:=EchelonForm(C);
      Diag, T2:=EchelonForm(Transpose(Ech));
-     T1lift:=ChangeRing(ChangeRing(T1, ZZ), ZZ4);
-     T2lift:=ChangeRing(ChangeRing(T2, ZZ), ZZ4);
-     det1:=ZZ!(Determinant(T1lift)+2)-2;
-     det2:=ZZ!(Determinant(T2lift)+2)-2;
-     kappa*:= det1*det2;
+     T1lift:=liftSLN(T1, 3);
+     T2lift:=liftSLN(T2,3);
      ret1:=[ChangeRing(DiagonalJoin(Transpose(T1lift), T1lift^(-1)), ZZ)];
      ret2:=[ChangeRing(DiagonalJoin(Transpose(T2lift)^(-1),  T2lift), ZZ)];
      trafo1:=DiagonalJoin(Transpose(T1) , T1^(-1));
@@ -185,9 +210,7 @@ function decompose_symplectic(S)
      Append(~ret1, ChangeRing(trafo, ZZ));
      S:=trafo^(-1)*S;
      A:=Submatrix(S, [1..N], [1..N]);
-     Alift:=ChangeRing(ChangeRing(A, ZZ), ZZ4);
-     detA:=ZZ!(Determinant(Alift)+2)-2;
-     kappa *:= detA;
+     Alift:=liftSLN(A,3);
      trafo:=DiagonalJoin(A , Transpose(A)^(-1));
      Append(~ret1, ChangeRing(DiagonalJoin(Alift, Transpose(Alift)^(-1)), ZZ));
      S:=trafo^(-1)*S;
@@ -196,7 +219,7 @@ function decompose_symplectic(S)
      Append(~ret1, J);
      Append(~ret1, ChangeRing(BlockMatrix(2,2,[[id, C], [zer, id]]), ZZ));
      Append(~ret1, J);
-     kappa *:= (-1)^N;
+     kappa := (-1)^N;
      S:=trafo^(-1)*S;
      Append(~ret2, ChangeRing(S, ZZ));
      return ret1 cat Reverse(ret2), kappa;
@@ -316,23 +339,22 @@ proj:=[[s[2..4],s[6..8]]: s in sys1new];
 
 
 
+
 for i in [1..20] do
-N1, N2:=special_fundamental_system(Transpose(N)[1..3] cat [Vector(sys[i])]);
-Special1:=Transpose(Matrix(Transpose(N)[1..3] cat [Vector(sys[i])] cat N1));
-Special2:=Transpose(Matrix(Transpose(N)[1..3] cat [Vector(sys[i])] cat N2));
-is_azygetic(Special1);
-is_azygetic(Special2);
-print N1, N2;
-S:=map_azygetic(Transpose(N)[1..4], Transpose(N)[1..3] cat [Vector(sys[i])]);
-A:=Submatrix(S, [1..4], [1..4]);
-B:=Submatrix(S, [1..4], [5..8]);
-C:=Submatrix(S, [5..8], [1..4]);
-D:=Submatrix(S, [5..8], [5..8]);
-vec:= Vector(Diagonal(B*Transpose(A)) cat Diagonal(D*Transpose(C)));
-print [n+vec: n in Transpose(S*N)[1..4]] eq Transpose(N)[1..3] cat [Vector(sys[i])];
-print Transpose(S)*J*S eq J;
-print "\n";
+	for k in [1..4] do
+		temp_list:=Transpose(N)[1..k-1] cat [Vector(sys[i])] cat Transpose(N)[k+1..4];
+		N1, N2, S:=special_fundamental_system(temp_list);
+		Special1:=Transpose(Matrix(temp_list cat N1));
+		Special2:=Transpose(Matrix(temp_list cat N2));
+		print is_azygetic(Special1);
+		print is_azygetic(Special2);
+		if not is_azygetic(Special2) then
+			print i,k;
+		end if;
+		print "\n";
+	end for;
 end for;
+
 
 
 S:=map_azygetic(Transpose(N)[1..4], Transpose(N)[1..3] cat [Vector(sys[1])]);
