@@ -1,4 +1,3 @@
-
 function is_azygetic(chars)
 	id:=IdentityMatrix(GF(2), 4);
         zer:=ZeroMatrix(GF(2), 4,4);
@@ -35,18 +34,18 @@ end function;
 
 function map_orthogonal(vec)
 	v1:=Vector(Eltseq(vec)[3..4]);
-        v2:=Vector(Eltseq(vec)[7..8]);
+    v2:=Vector(Eltseq(vec)[7..8]);
 	id2:=IdentityMatrix(GF(2),2);
 	zer2:=ZeroMatrix(GF(2),2,2);
 	V2:=VectorSpace(GF(2),2);
 	if v1 eq V2!0 and v2 eq V2!0 then
 		B:=Matrix(GF(2), [[1,0],[0,0]]);
-                ret:=BlockMatrix([[id2, B],[zer2, id2]]);
+        ret:=BlockMatrix([[id2, B],[zer2, id2]]);
 		retA:=Submatrix(ret, [1..2], [1..2]);
-                retB:=Submatrix(ret, [1..2], [3..4]);
-                retC:=Submatrix(ret, [3..4], [1..2]);
-                retD:=Submatrix(ret, [3..4], [3..4]);
-                return BlockMatrix(4,4, [[id2, zer2, zer2, zer2],[zer2, retA, zer2, retB],[zer2, zer2, id2, zer2], [zer2, retC, zer2, retD]]);
+        retB:=Submatrix(ret, [1..2], [3..4]);
+        retC:=Submatrix(ret, [3..4], [1..2]);
+        retD:=Submatrix(ret, [3..4], [3..4]);
+        return BlockMatrix(4,4, [[id2, zer2, zer2, zer2],[zer2, retA, zer2, retB],[zer2, zer2, id2, zer2], [zer2, retC, zer2, retD]]);
 	elif v2 eq Vector([GF(2)|0,0]) then
 		S1:=IdentityMatrix(GF(2),4);
 	elif v1 eq Vector([GF(2)|0,0]) then
@@ -54,16 +53,16 @@ function map_orthogonal(vec)
 		v1:=v2;
 	else
 		B:=Matrix(GF(2), [[0,1],[1,0]]);
-	        S1:=BlockMatrix([[id2, B],[zer2, id2]]);
+        S1:=BlockMatrix([[id2, B],[zer2, id2]]);
 	end if;
 	i:=Min([i: i in [1..2]| v1[i] ne 0]);
 	A:=Matrix(GF(2), 2,2, [ v1, V2.(3-i)]);
 	S2:=BlockMatrix([[A^(-1), zer2], [zer2, Transpose(A)]]);
 	ret:=S1*S2;
 	retA:=Submatrix(ret, [1..2], [1..2]);
-        retB:=Submatrix(ret, [1..2], [3..4]);
-        retC:=Submatrix(ret, [3..4], [1..2]);
-        retD:=Submatrix(ret, [3..4], [3..4]);
+    retB:=Submatrix(ret, [1..2], [3..4]);
+    retC:=Submatrix(ret, [3..4], [1..2]);
+    retD:=Submatrix(ret, [3..4], [3..4]);
 	return BlockMatrix(4,4, [[id2, zer2, zer2, zer2],[zer2, retA, zer2, retB],[zer2, zer2, id2, zer2], [zer2, retC, zer2, retD]]);
 end function;
 
@@ -120,7 +119,7 @@ function map_azygetic(azy1, azy2)
 end function;
 
 intrinsic special_fundamental_system(azy::SeqEnum) -> SeqEnum, SeqEnum, AlgMatElt
-{Given an azygetic system of 4 odd characteristics, computes the two sets of 6 even characteristics such that the union is azygetic. It returns a symplectic transformation into the standard system as well  }
+  {Given an azygetic system of 4 odd characteristics, computes the two sets of 6 even characteristics such that the union is azygetic. It returns a symplectic transformation into the standard system as well  }
 	zer:=ZeroMatrix(GF(2), 4,4);
 	zer1:=ZeroMatrix(GF(2), 4,1);
 	zer2:=ZeroMatrix(GF(2), 4,2);
@@ -305,7 +304,7 @@ eta:=M*Matrix(3, 1, Basis(K1)[1]);
 sys1:=[s:s in sys | s[1,1] eq 0];
 w:=Basis(K1)[1]*Transpose(M);
 T:=Matrix(GF(2), [[1,1,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]);
- Blo:=BlockMatrix([[(Transpose(T))^(-1), zer],[zer, T]]);
+Blo:=BlockMatrix([[(Transpose(T))^(-1), zer],[zer, T]]);
 
 T2:=Matrix(GF(2), [[0,1,0,0],[1,0,0,0],[0,0,0,0],[0,0,0,0]]);
 Blo2:=BlockMatrix([[id, zer],[T2, id]]);
@@ -317,21 +316,21 @@ proj:=[[s[2..4],s[6..8]]: s in sys1new];
 
 
 for i in [1..20] do
-N1, N2:=special_fundamental_system(Transpose(N)[1..3] cat [Vector(sys[i])]);
-Special1:=Transpose(Matrix(Transpose(N)[1..3] cat [Vector(sys[i])] cat N1));
-Special2:=Transpose(Matrix(Transpose(N)[1..3] cat [Vector(sys[i])] cat N2));
-is_azygetic(Special1);
-is_azygetic(Special2);
-print N1, N2;
-S:=map_azygetic(Transpose(N)[1..4], Transpose(N)[1..3] cat [Vector(sys[i])]);
-A:=Submatrix(S, [1..4], [1..4]);
-B:=Submatrix(S, [1..4], [5..8]);
-C:=Submatrix(S, [5..8], [1..4]);
-D:=Submatrix(S, [5..8], [5..8]);
-vec:= Vector(Diagonal(B*Transpose(A)) cat Diagonal(D*Transpose(C)));
-print [n+vec: n in Transpose(S*N)[1..4]] eq Transpose(N)[1..3] cat [Vector(sys[i])];
-print Transpose(S)*J*S eq J;
-print "\n";
+  N1, N2:=special_fundamental_system(Transpose(N)[1..3] cat [Vector(sys[i])]);
+  Special1:=Transpose(Matrix(Transpose(N)[1..3] cat [Vector(sys[i])] cat N1));
+  Special2:=Transpose(Matrix(Transpose(N)[1..3] cat [Vector(sys[i])] cat N2));
+  is_azygetic(Special1);
+  is_azygetic(Special2);
+  print N1, N2;
+  S:=map_azygetic(Transpose(N)[1..4], Transpose(N)[1..3] cat [Vector(sys[i])]);
+  A:=Submatrix(S, [1..4], [1..4]);
+  B:=Submatrix(S, [1..4], [5..8]);
+  C:=Submatrix(S, [5..8], [1..4]);
+  D:=Submatrix(S, [5..8], [5..8]);
+  vec:= Vector(Diagonal(B*Transpose(A)) cat Diagonal(D*Transpose(C)));
+  print [n+vec: n in Transpose(S*N)[1..4]] eq Transpose(N)[1..3] cat [Vector(sys[i])];
+  print Transpose(S)*J*S eq J;
+  print "\n";
 end for;
 
 
